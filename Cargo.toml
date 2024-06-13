@@ -1,0 +1,45 @@
+[package]
+name = "variant_myth"
+version = "0.1.0"
+authors = ["Pierre Marijon <pierre@marijon.fr>"]
+edition = "2021"
+description = "A variant annotater."
+rust-version = "1.75"
+
+homepage = "https://github.com/natir/variant_myth"
+repository = "https://github.com/natir/variant_myth"
+documentation = "https://natir.github.io/variant_myth/variant_myth"
+
+readme = "Readme.md"
+license-file = "LICENSE"
+
+
+[dependencies]
+# CLI management
+clap           = { version = "4", features = ["derive"] }
+
+
+# Error management
+thiserror      = { version = "1" }
+anyhow         = { version = "1"}
+
+
+# Logging and error management
+log            = { version = "0.4" }
+stderrlog      = { version = "0.5" }
+
+
+[dev-dependencies]
+criterion      = { version = "0.5" }
+
+[profile.release]
+lto = 'thin'
+opt-level = 3
+overflow-checks = false
+panic = 'abort'
+incremental = false
+
+
+[profile.profiling]
+inherits = "release"
+debug = true
