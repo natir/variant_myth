@@ -1,4 +1,4 @@
-//! A variant annotater.
+//! A variant annotator.
 
 #![warn(missing_docs)]
 
@@ -8,10 +8,13 @@
 
 /* project use */
 
-
 /* mod declaration */
+pub mod annotation;
+pub mod annotations_db;
 pub mod cli;
 pub mod error;
+pub mod interval_tree;
+pub mod variant;
 
 #[cfg(test)]
 mod tests {

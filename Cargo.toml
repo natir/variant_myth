@@ -3,8 +3,8 @@ name = "variant_myth"
 version = "0.1.0"
 authors = ["Pierre Marijon <pierre@marijon.fr>"]
 edition = "2021"
-description = "A variant annotater."
-rust-version = "1.75"
+description = "A variant annotator."
+rust-version = "1.74"
 
 homepage = "https://github.com/natir/variant_myth"
 repository = "https://github.com/natir/variant_myth"
@@ -14,15 +14,29 @@ readme = "Readme.md"
 license-file = "LICENSE"
 
 
+[features]
+parallel = ["dep:rayon"]
+
+
 [dependencies]
+# Specific
+ahash          = { version = "0.8", features = ["compile-time-rng"] }
+bstr           = { version = "1", features = ["serde"] }
+
+# Multi-threading
+rayon          = { version = "1", optional = true }
+
+# Input Output management
+csv            = { version = "1" }
+niffler        = { version = "2", features = ["bzip2", "lzma", "gz", "bgz"] }
+serde          = { version = "1", features = ["derive"] }
+
 # CLI management
 clap           = { version = "4", features = ["derive"] }
-
 
 # Error management
 thiserror      = { version = "1" }
 anyhow         = { version = "1"}
-
 
 # Logging and error management
 log            = { version = "0.4" }
@@ -31,6 +45,16 @@ stderrlog      = { version = "0.5" }
 
 [dev-dependencies]
 criterion      = { version = "0.5" }
+rand           = { version = "0.8" }
+
+[[bench]]
+name = "interval_build"
+harness = false
+
+[[bench]]
+name = "interval_access"
+harness = false
+
 
 [profile.release]
 lto = 'thin'
