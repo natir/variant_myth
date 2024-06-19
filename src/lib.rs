@@ -14,6 +14,7 @@ pub mod annotations_db;
 pub mod cli;
 pub mod error;
 pub mod interval_tree;
+pub mod sequences_db;
 pub mod variant;
 
 #[cfg(test)]

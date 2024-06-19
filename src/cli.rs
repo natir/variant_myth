@@ -64,7 +64,7 @@ impl Command {
 
     /// Get reference reader
     pub fn reference(&self) -> error::Result<std::io::BufReader<Box<dyn std::io::Read>>> {
-        Command::get_reader(&self.variant_path).map(std::io::BufReader::new)
+        Command::get_reader(&self.reference_path).map(std::io::BufReader::new)
     }
 
     /// Get annotations reader

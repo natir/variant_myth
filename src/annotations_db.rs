@@ -3,10 +3,6 @@
 /* std use */
 
 /* crate use */
-#[cfg(feature = "parallel")]
-use itertools::Itertools as _;
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 
 /* project use */
 use crate::annotation;
@@ -59,7 +55,7 @@ impl AnnotationsDataBase {
     pub fn get_annotation(
         &self,
         seqname: &[u8],
-        interval: core::ops::Range<u64>,
+        interval: interval_tree::Interval<u64>,
     ) -> Vec<&annotation::Annotation> {
         if let Some(chr) = self.intervals.get(seqname) {
             chr.find(interval).into_iter().map(|e| e.data()).collect()

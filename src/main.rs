@@ -13,6 +13,7 @@ use clap::Parser as _;
 use variant_myth::annotations_db;
 use variant_myth::cli;
 use variant_myth::error;
+use variant_myth::sequences_db;
 use variant_myth::variant;
 
 fn main() -> error::Result<()> {
@@ -33,6 +34,7 @@ fn main() -> error::Result<()> {
     log::info!("End read annotations");
 
     log::info!("Start read genome reference");
+    let sequences = sequences_db::SequencesDataBase::from_reader(params.reference()?)?;
     log::info!("End read genome reference");
 
     log::info!("Start read vcf");
@@ -41,6 +43,10 @@ fn main() -> error::Result<()> {
     for result in vcf_reader {
         let variant = result?;
         let (seqname, interval) = variant.get_interval();
+        for annot in annotations.get_annotation(seqname, interval.clone()) {
+            let (s, i) = annot.get_interval();
+            std::hint::black_box(sequences.get_interval(s, &i));
+        }
         annotations_counter
             .entry(annotations.get_annotation(seqname, interval).len() as u64)
             .and_modify(|c| *c += 1)
