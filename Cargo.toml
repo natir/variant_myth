@@ -23,6 +23,9 @@ parallel = ["dep:rayon"]
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
 
+# Other
+typed-builder   = { version = "0.18" }
+
 # Multi-threading
 rayon          = { version = "1", optional = true }
 
@@ -31,6 +34,7 @@ csv            = { version = "1" }
 niffler        = { version = "2", features = ["bzip2", "lzma", "gz", "bgz"] }
 serde          = { version = "1", features = ["derive"] }
 noodles        = { version = "0.77", features = ["fasta"] }
+serde_json     = { version = "1" }
 
 # CLI management
 clap           = { version = "4", features = ["derive"] }

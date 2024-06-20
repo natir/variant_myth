@@ -100,7 +100,27 @@ impl Attribute {
 
 impl std::fmt::Display for Attribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(f, "{}", String::from_utf8(self.gene_id.clone()).unwrap())
+        write!(
+            f,
+            "gene_id={};transcript_id={}",
+            String::from_utf8(self.gene_id.to_vec()).unwrap(),
+            String::from_utf8(self.transcript_id.to_vec()).unwrap(),
+        )?;
+        if let Some(gn) = &self.gene_name {
+            write!(f, ";gene_name={}", String::from_utf8(gn.to_vec()).unwrap())?;
+        }
+        if let Some(en) = &self.exon_number {
+            write!(
+                f,
+                ";exon_number={}",
+                String::from_utf8(en.to_vec()).unwrap()
+            )?;
+        }
+        if let Some(ei) = &self.exon_id {
+            write!(f, ";exon_id={}", String::from_utf8(ei.to_vec()).unwrap())?;
+        }
+
+        Ok(())
     }
 }
 
@@ -166,9 +186,24 @@ impl Annotation {
         &self.seqname
     }
 
+    /// Get seqname
+    pub fn get_source(&self) -> &[u8] {
+        &self.source
+    }
+
+    /// Get attribute annotation
+    pub fn get_attribute(&self) -> &Attribute {
+        &self.attribute
+    }
+
     /// Get transcript id
     pub fn get_transcript_id(&self) -> &[u8] {
         self.attribute.get_transcript_id()
+    }
+
+    /// Get feature
+    pub fn get_feature(&self) -> &[u8] {
+        &self.feature
     }
 }
 

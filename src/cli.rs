@@ -49,7 +49,9 @@ pub struct Command {
 }
 
 impl Command {
-    fn get_reader(path: &std::path::PathBuf) -> error::Result<Box<dyn std::io::Read>> {
+    fn get_reader(
+        path: &std::path::PathBuf,
+    ) -> error::Result<Box<dyn std::io::Read + std::marker::Send>> {
         let file = std::fs::File::open(path)?;
         let boxed = Box::new(file);
         let (reader, _compression) = niffler::send::get_reader(boxed)?;
@@ -58,18 +60,25 @@ impl Command {
     }
 
     /// Get variant reader
-    pub fn variant(&self) -> error::Result<std::io::BufReader<Box<dyn std::io::Read>>> {
+    pub fn variant(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
         Command::get_reader(&self.variant_path).map(std::io::BufReader::new)
     }
 
     /// Get reference reader
-    pub fn reference(&self) -> error::Result<std::io::BufReader<Box<dyn std::io::Read>>> {
+    pub fn reference(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
         Command::get_reader(&self.reference_path).map(std::io::BufReader::new)
     }
 
     /// Get annotations reader
-    pub fn annotations(&self) -> error::Result<std::io::BufReader<Box<dyn std::io::Read>>> {
-        let mut handle: Box<dyn std::io::Read> = Box::new(std::io::Cursor::new(vec![]));
+    pub fn annotations(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        let mut handle: Box<dyn std::io::Read + std::marker::Send> =
+            Box::new(std::io::Cursor::new(vec![]));
 
         for path in &self.annotations_path {
             handle = Box::new(handle.chain(Command::get_reader(path)?));
@@ -79,7 +88,9 @@ impl Command {
     }
 
     /// Get output writer
-    pub fn output(&self) -> error::Result<std::io::BufWriter<Box<dyn std::io::Write>>> {
+    pub fn output(
+        &self,
+    ) -> error::Result<std::io::BufWriter<Box<dyn std::io::Write + std::marker::Send>>> {
         let file = std::fs::File::create(&self.output_path)?;
         let boxed = Box::new(file);
 

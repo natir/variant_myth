@@ -29,6 +29,24 @@ fn main() -> error::Result<()> {
         .init()
         .context("stderrlog already create a logger")?;
 
+    let (annotations, sequences) = get_database(&params)?;
+
+    log::info!("Start annotate variant");
+    let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
+    variant_myth::vcf2json(&annotations, &sequences, vcf_reader, params.output()?)?;
+    log::info!("End annotate variant");
+
+    Ok(())
+}
+
+#[cfg(not(feature = "parallel"))]
+#[inline(always)]
+fn get_database(
+    params: &cli::Command,
+) -> error::Result<(
+    annotations_db::AnnotationsDataBase,
+    sequences_db::SequencesDataBase,
+)> {
     log::info!("Start read annotations");
     let annotations = annotations_db::AnnotationsDataBase::from_reader(params.annotations()?)?;
     log::info!("End read annotations");
@@ -37,34 +55,34 @@ fn main() -> error::Result<()> {
     let sequences = sequences_db::SequencesDataBase::from_reader(params.reference()?)?;
     log::info!("End read genome reference");
 
-    log::info!("Start read vcf");
-    let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
-    let mut annotations_counter = ahash::AHashMap::new();
-    for result in vcf_reader {
-        let variant = result?;
-        let (seqname, interval) = variant.get_interval();
-        for annot in annotations.get_annotation(seqname, interval.clone()) {
-            let (s, i) = annot.get_interval();
-            std::hint::black_box(sequences.get_interval(s, &i));
-        }
-        annotations_counter
-            .entry(annotations.get_annotation(seqname, interval).len() as u64)
-            .and_modify(|c| *c += 1)
-            .or_insert(1u64);
-    }
-    log::info!("End read vcf");
+    Ok((annotations, sequences))
+}
 
-    let mut res: Vec<(u64, u64)> = annotations_counter.iter().map(|x| (*x.0, *x.1)).collect();
-    res.sort();
-    let total: u64 = res.iter().map(|x| x.1).sum();
-    for (key, value) in res {
-        println!(
-            "{},{},{:.4}",
-            key,
-            value,
-            value as f64 / total as f64 * 100.0
-        );
-    }
+#[cfg(feature = "parallel")]
+#[inline(always)]
+fn get_database(
+    params: &cli::Command,
+) -> error::Result<(
+    annotations_db::AnnotationsDataBase,
+    sequences_db::SequencesDataBase,
+)> {
+    let annot_reader = params.annotations()?;
+    let annot_thread = std::thread::spawn(|| {
+        log::info!("Start read annotations");
+        let annotations = annotations_db::AnnotationsDataBase::from_reader(annot_reader)?;
+        log::info!("End read annotations");
 
-    Ok(())
+        Ok::<annotations_db::AnnotationsDataBase, anyhow::Error>(annotations)
+    });
+
+    let seq_reader = params.reference()?;
+    let seq_thread = std::thread::spawn(|| {
+        log::info!("Start read genome reference");
+        let sequences = sequences_db::SequencesDataBase::from_reader(seq_reader)?;
+        log::info!("End read genome reference");
+
+        Ok::<sequences_db::SequencesDataBase, anyhow::Error>(sequences)
+    });
+
+    Ok((annot_thread.join().unwrap()?, seq_thread.join().unwrap()?))
 }

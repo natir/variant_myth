@@ -16,7 +16,9 @@ pub struct AnnotationsDataBase {
 
 impl AnnotationsDataBase {
     /// Build a AnnotationsDataBase from a reader
-    pub fn from_reader(input: std::io::BufReader<Box<dyn std::io::Read>>) -> error::Result<Self> {
+    pub fn from_reader(
+        input: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>,
+    ) -> error::Result<Self> {
         let mut intervals: ahash::AHashMap<
             Vec<u8>,
             interval_tree::IntervalTree<u64, annotation::Annotation>,

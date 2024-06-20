@@ -7,12 +7,23 @@
 /* project use */
 use crate::error;
 
+#[derive(Clone, serde::Serialize)]
 /// Store Variant content
 pub struct Variant {
-    seqname: Vec<u8>,
-    position: u64,
-    ref_seq: Vec<u8>,
-    alt_seq: Vec<u8>,
+    #[serde(serialize_with = "crate::serialize_bstr")]
+    /// Sequence name associate with variant
+    pub seqname: Vec<u8>,
+
+    /// Position of the variant
+    pub position: u64,
+
+    #[serde(serialize_with = "crate::serialize_bstr")]
+    /// Reference sequence associate with variant
+    pub ref_seq: Vec<u8>,
+
+    #[serde(serialize_with = "crate::serialize_bstr")]
+    /// Alternative sequence associate with variant
+    pub alt_seq: Vec<u8>,
 }
 
 impl Variant {
@@ -36,6 +47,19 @@ impl Variant {
         (
             &self.seqname,
             self.position..self.position + self.ref_seq.len() as u64,
+        )
+    }
+}
+
+impl std::fmt::Debug for Variant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{} {} {} {}",
+            String::from_utf8(self.seqname.to_vec()).unwrap(),
+            self.position,
+            String::from_utf8(self.ref_seq.to_vec()).unwrap(),
+            String::from_utf8(self.alt_seq.to_vec()).unwrap()
         )
     }
 }

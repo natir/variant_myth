@@ -13,7 +13,9 @@ pub struct SequencesDataBase(ahash::AHashMap<Vec<u8>, Vec<u8>>);
 
 impl SequencesDataBase {
     /// Build a SequenceDataBase from a reader
-    pub fn from_reader(input: std::io::BufReader<Box<dyn std::io::Read>>) -> error::Result<Self> {
+    pub fn from_reader(
+        input: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>,
+    ) -> error::Result<Self> {
         let mut inner = ahash::AHashMap::new();
 
         let mut reader = noodles::fasta::io::Reader::new(input);
