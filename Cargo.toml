@@ -24,7 +24,7 @@ ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
 
 # Other
-typed-builder   = { version = "0.18" }
+derive_builder   = { version = "0.20" }
 
 # Multi-threading
 rayon          = { version = "1", optional = true }

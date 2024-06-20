@@ -31,7 +31,8 @@ impl AnnotationsDataBase {
 
         for result in reader.byte_records() {
             let annotation = annotation::Annotation::from_byte_record(&result?)?;
-            let (seqname, interval) = annotation.get_interval();
+            let seqname = annotation.get_seqname();
+            let interval = annotation.get_interval();
 
             intervals
                 .entry(seqname.to_vec())

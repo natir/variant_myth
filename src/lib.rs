@@ -91,25 +91,53 @@ pub fn variants2myth(
 
     let mut myth = myth::Myth::from_variant(variant.clone());
 
-    for annotation in annotations.get_annotation(seqname, interval) {
-        if annotation.get_feature() == b"transcript" {
-            let annotation_myth = myth::AnnotationMyth::builder()
-                .source(annotation.get_source().to_vec())
-                .transcript_id(annotation.get_transcript_id().to_vec());
+    for transcript in annotations
+        .get_annotation(seqname, interval)
+        .iter()
+        .filter(|a| a.get_feature() == b"transcript")
+    {
+        let mut annotation_myth = myth::AnnotationMyth::builder()
+            .source(transcript.get_source().to_vec())
+            .transcript_id(transcript.get_transcript_id().to_vec());
 
-            let transcript_annot_interval = annotation.get_interval();
-            for subannot in
-                annotations.get_annotation(transcript_annot_interval.0, transcript_annot_interval.1)
-            {
-                if subannot.get_attribute().get_transcript_id()
-                    == annotation.get_attribute().get_transcript_id()
-                {
-                    log::debug!("\tannotation: {}", subannot)
-                }
-            }
+        let related_annot = annotations
+            .get_annotation(transcript.get_seqname(), transcript.get_interval())
+            .into_iter()
+            .filter(|a| {
+                a.get_attribute().get_transcript_id()
+                    == transcript.get_attribute().get_transcript_id()
+            })
+            .collect::<Vec<&annotation::Annotation>>();
 
-            myth.add_annotation(annotation_myth.build());
-        }
+        // 5' UTR
+
+        // Exon annotations
+        let mut pos_exons = related_annot
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .map(|a| {
+                (
+                    a.get_attribute().get_exon_number(),
+                    (a.get_interval(), *a.get_strand()),
+                )
+            })
+            .collect::<Vec<(u64, (interval_tree::Interval<u64>, annotation::Strand))>>();
+
+        #[cfg(feature = "parallel")]
+        pos_exons.par_sort_unstable_by_key(|a| a.0);
+        #[cfg(not(feature = "parallel"))]
+        pos_exons.sort_unstable_by_key(|a| a.0);
+
+        let exons = pos_exons
+            .iter()
+            .map(|a| a.1.clone())
+            .collect::<Vec<(interval_tree::Interval<u64>, annotation::Strand)>>();
+
+        let sequence = sequences.get_transcript(transcript.get_seqname(), &exons);
+
+        // 3' UTR
+
+        myth.add_annotation(annotation_myth.build().unwrap()); // Build error could never append
     }
 
     myth

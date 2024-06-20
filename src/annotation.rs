@@ -9,7 +9,7 @@ use bstr::ByteSlice as _;
 use crate::error;
 
 /// Define annotation strand
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Strand {
     /// Annotation is in forward strand
     Forward,
@@ -27,7 +27,7 @@ impl std::fmt::Display for Strand {
 }
 
 /// Define annotation frame
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Frame {
     /// Annotation frame is Unknow
     Unknow,
@@ -56,13 +56,13 @@ pub struct Attribute {
     gene_id: Vec<u8>,
     transcript_id: Vec<u8>,
     gene_name: Option<Vec<u8>>,
-    exon_number: Option<Vec<u8>>,
+    exon_number: Option<u64>,
     exon_id: Option<Vec<u8>>,
 }
 
 impl Attribute {
     /// Create an attribute from u8 slice
-    pub fn from_u8_slice(slice: &[u8]) -> Self {
+    pub fn from_u8_slice(slice: &[u8]) -> error::Result<Self> {
         let mut obj = Attribute::default();
 
         for attribute in slice.split_str(";") {
@@ -77,7 +77,8 @@ impl Attribute {
                     obj.gene_name = Some(value.to_vec())
                 }
                 [b'e', b'x', b'o', b'n', b'_', b'n', b'u', b'm', b'b', b'e', b'r', b'=', value @ ..] => {
-                    obj.exon_number = Some(value.to_vec())
+                    obj.exon_number =
+                        Some(unsafe { String::from_utf8_unchecked(value.to_vec()).parse::<u64>()? })
                 }
                 [b'e', b'x', b'o', b'n', b'_', b'i', b'd', b'=', value @ ..] => {
                     obj.exon_id = Some(value.to_vec())
@@ -89,12 +90,17 @@ impl Attribute {
             }
         }
 
-        obj
+        Ok(obj)
     }
 
     /// Get transcript_id
     pub fn get_transcript_id(&self) -> &[u8] {
         &self.transcript_id
+    }
+
+    /// Get exon_number
+    pub fn get_exon_number(&self) -> u64 {
+        self.exon_number.unwrap_or(0)
     }
 }
 
@@ -110,11 +116,7 @@ impl std::fmt::Display for Attribute {
             write!(f, ";gene_name={}", String::from_utf8(gn.to_vec()).unwrap())?;
         }
         if let Some(en) = &self.exon_number {
-            write!(
-                f,
-                ";exon_number={}",
-                String::from_utf8(en.to_vec()).unwrap()
-            )?;
+            write!(f, ";exon_number={}", en)?;
         }
         if let Some(ei) = &self.exon_id {
             write!(f, ";exon_id={}", String::from_utf8(ei.to_vec()).unwrap())?;
@@ -172,13 +174,13 @@ impl Annotation {
                 b"2" => Frame::Two,
                 _ => return Err(error::Error::GffBadFrame.into()),
             },
-            attribute: Attribute::from_u8_slice(record.get(8).unwrap()),
+            attribute: Attribute::from_u8_slice(record.get(8).unwrap())?,
         })
     }
 
     /// Create interval associate with annotation
-    pub fn get_interval(&self) -> (&[u8], core::ops::Range<u64>) {
-        (&self.seqname, self.start..self.end)
+    pub fn get_interval(&self) -> core::ops::Range<u64> {
+        self.start..self.end
     }
 
     /// Get seqname
@@ -189,6 +191,11 @@ impl Annotation {
     /// Get seqname
     pub fn get_source(&self) -> &[u8] {
         &self.source
+    }
+
+    /// Get strand
+    pub fn get_strand(&self) -> &Strand {
+        &self.strand
     }
 
     /// Get attribute annotation

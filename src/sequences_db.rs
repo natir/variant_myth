@@ -5,8 +5,24 @@
 /* crate use */
 
 /* project use */
+use crate::annotation;
 use crate::error;
 use crate::interval_tree;
+
+/// Perform reverse complement
+pub fn rev_comp(seq: &mut [u8]) {
+    // Reverse the sequence
+    seq.reverse();
+
+    // Complement the sequence
+    seq.iter_mut().for_each(|c| {
+        if *c & 2 == 0 {
+            *c ^= 21;
+        } else {
+            *c ^= 4;
+        }
+    });
+}
 
 /// Store sequence data
 pub struct SequencesDataBase(ahash::AHashMap<Vec<u8>, Vec<u8>>);
@@ -45,18 +61,30 @@ impl SequencesDataBase {
     pub fn get_transcript(
         &self,
         seqname: &[u8],
-        intervals: &[interval_tree::Interval<u64>],
+        intervals: &[(interval_tree::Interval<u64>, annotation::Strand)],
     ) -> Vec<u8> {
-        let mut transcript =
-            Vec::with_capacity(intervals.iter().map(|i| (i.end - i.start) as usize).sum());
+        let mut transcript = Vec::with_capacity(
+            intervals
+                .iter()
+                .map(|i| (i.0.end - i.0.start) as usize)
+                .sum(),
+        );
 
-        for interval in intervals {
-            match self.get_interval(seqname, interval) {
-                Some(seq) => transcript.extend(seq),
+        for (i, s) in intervals {
+            match self.get_interval(seqname, i) {
+                Some(seq) => {
+                    let len_before = transcript.len();
+                    transcript.extend(seq);
+                    match s {
+                        annotation::Strand::Forward => (),
+                        annotation::Strand::Reverse => rev_comp(&mut transcript[len_before..]),
+                    }
+                }
                 None => log::error!(
-                    "Can't get sequence between position {}..{} in {}",
-                    interval.start,
-                    interval.end,
+                    "Can't get sequence between position {}..{} {} in {}",
+                    i.start,
+                    i.end,
+                    s,
                     String::from_utf8(seqname.to_vec()).unwrap(),
                 ),
             }
