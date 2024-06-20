@@ -14,6 +14,7 @@ use variant_myth::annotations_db;
 use variant_myth::cli;
 use variant_myth::error;
 use variant_myth::sequences_db;
+use variant_myth::translate;
 use variant_myth::variant;
 
 fn main() -> error::Result<()> {
@@ -29,11 +30,22 @@ fn main() -> error::Result<()> {
         .init()
         .context("stderrlog already create a logger")?;
 
-    let (annotations, sequences) = get_database(&params)?;
+    #[cfg(feature = "parallel")]
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(params.threads())
+        .build_global()?;
+
+    let (annotations, sequences, translate) = get_database(&params)?;
 
     log::info!("Start annotate variant");
     let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
-    variant_myth::vcf2json(&annotations, &sequences, vcf_reader, params.output()?)?;
+    variant_myth::vcf2json(
+        &annotations,
+        &sequences,
+        &translate,
+        vcf_reader,
+        params.output()?,
+    )?;
     log::info!("End annotate variant");
 
     Ok(())
@@ -46,6 +58,7 @@ fn get_database(
 ) -> error::Result<(
     annotations_db::AnnotationsDataBase,
     sequences_db::SequencesDataBase,
+    translate::Translate,
 )> {
     log::info!("Start read annotations");
     let annotations = annotations_db::AnnotationsDataBase::from_reader(params.annotations()?)?;
@@ -55,7 +68,11 @@ fn get_database(
     let sequences = sequences_db::SequencesDataBase::from_reader(params.reference()?)?;
     log::info!("End read genome reference");
 
-    Ok((annotations, sequences))
+    log::info!("Start read translation table");
+    let translate = translate::Translate::from_reader(params.translate()?)?;
+    log::info!("End read translation table");
+
+    Ok((annotations, sequences, translate))
 }
 
 #[cfg(feature = "parallel")]
@@ -65,6 +82,7 @@ fn get_database(
 ) -> error::Result<(
     annotations_db::AnnotationsDataBase,
     sequences_db::SequencesDataBase,
+    translate::Translate,
 )> {
     let annot_reader = params.annotations()?;
     let annot_thread = std::thread::spawn(|| {
@@ -84,5 +102,18 @@ fn get_database(
         Ok::<sequences_db::SequencesDataBase, anyhow::Error>(sequences)
     });
 
-    Ok((annot_thread.join().unwrap()?, seq_thread.join().unwrap()?))
+    let translate_reader = params.translate()?;
+    let translate_thread = std::thread::spawn(|| {
+        log::info!("Start read translation table");
+        let translate = translate::Translate::from_reader(translate_reader)?;
+        log::info!("End read translation table");
+
+        Ok::<translate::Translate, anyhow::Error>(translate)
+    });
+
+    Ok((
+        annot_thread.join().unwrap()?,
+        seq_thread.join().unwrap()?,
+        translate_thread.join().unwrap()?,
+    ))
 }

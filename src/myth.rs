@@ -9,7 +9,9 @@ use serde::Serialize;
 /* project use */
 use crate::variant;
 
-#[derive(Debug, Serialize, typed_builder::TypedBuilder)]
+/// Struct to store annotation information
+#[derive(Debug, Serialize, derive_builder::Builder, Clone)]
+#[builder(pattern = "owned")]
 pub struct AnnotationMyth {
     #[serde(serialize_with = "crate::serialize_bstr")]
     /// Source of annotation
@@ -20,6 +22,14 @@ pub struct AnnotationMyth {
     pub transcript_id: Vec<u8>,
 }
 
+impl AnnotationMyth {
+    /// Get builder of AnnotationMyth
+    pub fn builder() -> AnnotationMythBuilder {
+        AnnotationMythBuilder::default()
+    }
+}
+
+/// Store information around variant
 #[derive(Debug, Serialize)]
 pub struct Myth {
     variant: variant::Variant,

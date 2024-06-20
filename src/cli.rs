@@ -30,11 +30,20 @@ pub struct Command {
     #[clap(short = 'a', long = "annotations")]
     annotations_path: Vec<std::path::PathBuf>,
 
+    /// Translate table path
+    #[clap(short = 't', long = "translate")]
+    translate_path: std::path::PathBuf,
+
     /// Output path
     #[clap(short = 'o', long = "output")]
     output_path: std::path::PathBuf,
 
     // Generic option
+    #[cfg(feature = "parallel")]
+    /// Number of theard use 0 use all avaible core, default value 0
+    #[clap(long = "threads")]
+    threads: Option<usize>,
+
     /// Silence all output
     #[clap(short = 'q', long = "quiet")]
     quiet: bool,
@@ -87,6 +96,13 @@ impl Command {
         Ok(std::io::BufReader::new(handle))
     }
 
+    /// Get translate reader
+    pub fn translate(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        Command::get_reader(&self.translate_path).map(std::io::BufReader::new)
+    }
+
     /// Get output writer
     pub fn output(
         &self,
@@ -95,6 +111,12 @@ impl Command {
         let boxed = Box::new(file);
 
         Ok(std::io::BufWriter::new(boxed))
+    }
+
+    /// Get number of thread
+    #[cfg(feature = "parallel")]
+    pub fn threads(&self) -> usize {
+        self.threads.unwrap_or(0)
     }
 
     /// Get verbosity level

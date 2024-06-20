@@ -18,6 +18,7 @@ pub mod error;
 pub mod interval_tree;
 pub mod myth;
 pub mod sequences_db;
+pub mod translate;
 pub mod variant;
 
 #[cfg(not(feature = "parallel"))]
@@ -25,6 +26,7 @@ pub mod variant;
 pub fn vcf2json<R, W>(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
+    translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
     mut output: W,
 ) -> error::Result<()>
@@ -33,7 +35,10 @@ where
     W: std::io::Write,
 {
     for result in vcf_reader {
-        serde_json::to_writer(&mut output, &variants2myth(annotations, sequences, result?))?;
+        serde_json::to_writer(
+            &mut output,
+            &variants2myth(annotations, sequences, translate, result?),
+        )?;
     }
 
     Ok(())
@@ -44,7 +49,8 @@ where
 pub fn vcf2json<R, W>(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
-    mut vcf_reader: variant::VcfReader<R>,
+    translate: &translate::Translate,
+    vcf_reader: variant::VcfReader<R>,
     mut output: W,
 ) -> error::Result<()>
 where
@@ -63,7 +69,7 @@ where
         .par_bridge()
         .filter(Result::is_ok)
         .map(error::Result::unwrap)
-        .map(|variant| tx.send(variants2myth(annotations, sequences, variant)))
+        .map(|variant| tx.send(variants2myth(annotations, sequences, translate, variant)))
         .collect::<Vec<core::result::Result<(), std::sync::mpsc::SendError<myth::Myth>>>>();
 
     for result in results {
@@ -80,9 +86,11 @@ where
     Ok(())
 }
 
+/// Get myth about variants
 pub fn variants2myth(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
+    translate: &translate::Translate,
     variant: variant::Variant,
 ) -> myth::Myth {
     let (seqname, interval) = variant.get_interval();
@@ -111,7 +119,7 @@ pub fn variants2myth(
 
         // 5' UTR
 
-        // Exon annotations
+        // Get exon sequence
         let mut pos_exons = related_annot
             .iter()
             .filter(|a| a.get_feature() == b"exon")
@@ -133,7 +141,12 @@ pub fn variants2myth(
             .map(|a| a.1.clone())
             .collect::<Vec<(interval_tree::Interval<u64>, annotation::Strand)>>();
 
+        // Edit sequence with variant
         let sequence = sequences.get_transcript(transcript.get_seqname(), &exons);
+
+        // Found position
+
+        let aa = translate.translate(&sequence);
 
         // 3' UTR
 
