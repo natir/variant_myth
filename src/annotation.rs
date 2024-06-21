@@ -178,6 +178,13 @@ impl Annotation {
         })
     }
 
+    /// Build annotation from another Annotation and set feature
+    pub fn from_annotation(a: &Self, feature: &[u8]) -> Self {
+        let mut obj = a.clone();
+        obj.feature = feature.to_vec();
+        obj
+    }
+
     /// Create interval associate with annotation
     pub fn get_interval(&self) -> core::ops::Range<u64> {
         self.start..self.end

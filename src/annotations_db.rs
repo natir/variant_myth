@@ -37,15 +37,15 @@ impl AnnotationsDataBase {
             intervals
                 .entry(seqname.to_vec())
                 .and_modify(
-                    |e: &mut interval_tree::IntervalTree<u64, annotation::Annotation>| {
-                        e.insert(interval.clone(), annotation.clone())
+                    |tree: &mut interval_tree::IntervalTree<u64, annotation::Annotation>| {
+                        Self::add_annotion(tree, interval.clone(), annotation.clone());
                     },
                 )
                 .or_insert({
-                    let mut i = interval_tree::IntervalTree::new();
+                    let mut tree = interval_tree::IntervalTree::new();
 
-                    i.insert(interval, annotation);
-                    i
+                    Self::add_annotion(&mut tree, interval, annotation);
+                    tree
                 });
         }
 
@@ -65,5 +65,25 @@ impl AnnotationsDataBase {
         } else {
             vec![]
         }
+    }
+
+    /// Add annotation
+    fn add_annotion(
+        tree: &mut interval_tree::IntervalTree<u64, annotation::Annotation>,
+        interval: interval_tree::Interval<u64>,
+        annotation: annotation::Annotation,
+    ) {
+        if annotation.get_feature() == b"transcript" {
+            tree.insert(
+                interval.start - 5000..interval.start,
+                annotation::Annotation::from_annotation(&annotation, b"upstream"),
+            );
+            tree.insert(
+                interval.end..interval.end + 5000,
+                annotation::Annotation::from_annotation(&annotation, b"downstream"),
+            );
+        }
+
+        tree.insert(interval.clone(), annotation.clone())
     }
 }

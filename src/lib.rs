@@ -99,77 +99,158 @@ pub fn variants2myth(
 
     let mut myth = myth::Myth::from_variant(variant.clone());
 
-    for transcript in annotations
-        .get_annotation(seqname, interval)
+    let var_annot = annotations.get_annotation(seqname, interval);
+
+    if var_annot.is_empty() {
+        myth.add_annotation(
+            myth::AnnotationMyth::builder()
+                .source(b"variant_myth".to_vec())
+                .transcript_id(vec![])
+                .effects(vec![myth::Effect::Intergenic])
+                .build()
+                .unwrap(), // No possible error in build
+        )
+    }
+
+    for up_annot in var_annot.iter().filter(|a| a.get_feature() == b"upstream") {
+        myth.add_annotation(
+            myth::AnnotationMyth::builder()
+                .source(up_annot.get_source().to_vec())
+                .transcript_id(up_annot.get_transcript_id().to_vec())
+                .effects(vec![myth::Effect::Upstream])
+                .build()
+                .unwrap(), // No possible error in build
+        )
+    }
+
+    for down_annot in var_annot
+        .iter()
+        .filter(|a| a.get_feature() == b"downstream")
+    {
+        myth.add_annotation(
+            myth::AnnotationMyth::builder()
+                .source(down_annot.get_source().to_vec())
+                .transcript_id(down_annot.get_transcript_id().to_vec())
+                .effects(vec![myth::Effect::Downstream])
+                .build()
+                .unwrap(), // No possible error in build
+        )
+    }
+
+    for transcript in var_annot
         .iter()
         .filter(|a| a.get_feature() == b"transcript")
     {
-        let mut annotation_myth = myth::AnnotationMyth::builder()
+        let mut transcript_myth = myth::AnnotationMyth::builder()
             .source(transcript.get_source().to_vec())
-            .transcript_id(transcript.get_transcript_id().to_vec());
+            .transcript_id(transcript.get_transcript_id().to_vec())
+            .effects(vec![myth::Effect::Transcript]);
 
-        let related_annot = annotations
+        let transcript_annot = annotations
             .get_annotation(transcript.get_seqname(), transcript.get_interval())
-            .into_iter()
+            .iter()
             .filter(|a| {
                 a.get_attribute().get_transcript_id()
                     == transcript.get_attribute().get_transcript_id()
             })
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        if transcript_annot.iter().any(|a| a.get_feature() == b"CDS") {
+            transcript_myth.add_effect(myth::Effect::Cds)
+        }
+
+        let utr5_annot = transcript_annot
+            .iter()
+            .filter(|a| a.get_feature() == b"5UTR")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        let exon_annot = transcript_annot
+            .iter()
+            .filter(|a| a.get_feature() == b"5UTR")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        let utr3_annot = transcript_annot
+            .iter()
+            .filter(|a| a.get_feature() == b"3UTR")
+            .cloned()
             .collect::<Vec<&annotation::Annotation>>();
 
         // 5' UTR
+        if !utr5_annot.is_empty() {
+            transcript_myth.add_effect(myth::Effect::Utr5Prime)
+        }
 
         // Get exon sequence
-        let mut pos_exons = related_annot
-            .iter()
-            .filter(|a| a.get_feature() == b"exon")
-            .map(|a| {
-                (
-                    a.get_attribute().get_exon_number(),
-                    (a.get_interval(), *a.get_strand()),
-                )
-            })
-            .collect::<Vec<(u64, (interval_tree::Interval<u64>, annotation::Strand))>>();
-
-        #[cfg(feature = "parallel")]
-        pos_exons.par_sort_unstable_by_key(|a| a.0);
-        #[cfg(not(feature = "parallel"))]
-        pos_exons.sort_unstable_by_key(|a| a.0);
-
-        let exons = pos_exons
-            .iter()
-            .map(|a| a.1.clone())
-            .collect::<Vec<(interval_tree::Interval<u64>, annotation::Strand)>>();
-
-        // Edit sequence with variant
-        let original_seq = sequences.get_transcript(transcript.get_seqname(), &exons);
-
-        // Found position
-        let exon_target = exons
-            .iter()
-            .position(|e| variant.position > e.0.start && variant.position < e.0.end)
-            .unwrap_or(exons.len());
-        let transcript_pos = exons[..exon_target]
-            .iter()
-            .map(|e: &(interval_tree::Interval<u64>, annotation::Strand)| e.0.end - e.0.start)
-            .sum::<u64>()
-            + variant.position
-            - exons[exon_target].0.start;
-        let variant_seq = original_seq[..transcript_pos as usize]
-            .iter()
-            .chain(&variant.alt_seq)
-            .chain(&original_seq[transcript_pos as usize + variant.ref_seq.len()..])
-            .cloned()
-            .collect::<Vec<u8>>();
-
-        let aa = translate.translate(&variant_seq);
+        // if !exon_annot.is_empty() {
+        //     transcript_myth.extend_effect(
+        //         exon_effect(translate, sequences, exon_annot.as_ref(), &variant).as_ref(),
+        //     );
+        // }
 
         // 3' UTR
+        if !utr3_annot.is_empty() {
+            transcript_myth.add_effect(myth::Effect::Utr5Prime)
+        }
 
-        myth.add_annotation(annotation_myth.build().unwrap()); // Build error could never append
+        myth.add_annotation(transcript_myth.build().unwrap()); // Build error could never append
     }
 
     myth
+}
+
+fn exon_effect(
+    translate: &translate::Translate,
+    sequences: &sequences_db::SequencesDataBase,
+    exon_annot: &[&annotation::Annotation],
+    variant: &variant::Variant,
+) -> Vec<myth::Effect> {
+    let mut pos_exons = exon_annot
+        .iter()
+        .map(|a| {
+            (
+                a.get_attribute().get_exon_number(),
+                (a.get_interval(), *a.get_strand()),
+            )
+        })
+        .collect::<Vec<(u64, (interval_tree::Interval<u64>, annotation::Strand))>>();
+
+    #[cfg(feature = "parallel")]
+    pos_exons.par_sort_unstable_by_key(|a| a.0);
+    #[cfg(not(feature = "parallel"))]
+    pos_exons.sort_unstable_by_key(|a| a.0);
+
+    let exons = pos_exons
+        .iter()
+        .map(|a| a.1.clone())
+        .collect::<Vec<(interval_tree::Interval<u64>, annotation::Strand)>>();
+
+    // Edit sequence with variant
+    let original_seq = sequences.get_transcript(exon_annot[0].get_seqname(), &exons);
+
+    // Found position
+    let exon_target = exons
+        .iter()
+        .position(|e| variant.position > e.0.start && variant.position < e.0.end)
+        .unwrap_or(exons.len());
+    let transcript_pos = exons[..exon_target]
+        .iter()
+        .map(|e: &(interval_tree::Interval<u64>, annotation::Strand)| e.0.end - e.0.start)
+        .sum::<u64>()
+        + variant.position
+        - exons[exon_target].0.start;
+    let variant_seq = original_seq[..transcript_pos as usize]
+        .iter()
+        .chain(&variant.alt_seq)
+        .chain(&original_seq[transcript_pos as usize + variant.ref_seq.len()..])
+        .cloned()
+        .collect::<Vec<u8>>();
+
+    let _aa = translate.translate(&variant_seq);
+
+    vec![]
 }
 
 fn serialize_bstr<T, S>(v: T, serializer: S) -> Result<S::Ok, S::Error>

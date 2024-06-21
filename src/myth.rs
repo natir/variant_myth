@@ -7,62 +7,71 @@
 /* project use */
 use crate::variant;
 
+/// Effect of variant
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum Effect {
-    /// A variant in 5′UTR region produces a three base sequence that can be a START codon.
-    StartGaine,
+    /// The variant hits a CDS.
+    Cds,
+    /// One or many codons are changed
+    CodonChange,
+    /// One codon is changed and one or more codons are deleted
+    CodonChangePlusCodonDeletion,
+    /// One codon is changed and one or many codons are inserted
+    CodonChangePlusCodonInsertion,
+    /// One or many codons are deleted
+    CodonDeletion,
+    /// One or many codons are inserted
+    CodonInsertion,
+    /// Downstream of a gene (default length: 5K bases)
+    Downstream,
+    /// The vairant hist an exon.
+    Exon,
+    /// A deletion removes the whole exon.
+    ExonDeleted,
+    ///Insertion or deletion causes a frame shift
+    FrameShift,
+    /// The variant hits a gene.
+    Gene,
+    /// Variant hist and intron. Technically, hits no exon in the transcript.
+    Intron,
+    /// The variant is in an intergenic region
+    Intergenic,
+    /// The variant is in a highly conserved intergenic region
+    IntergenicConserved,
+    /// The variant is in a highly conserved intronic region
+    IntronConserved,
+    /// Variant causes a codon that produces a different amino acid
+    NonSynonymousCoding,
     /// The variant hits a splice acceptor site (defined as two bases before exon start, except for the first exon).
     SpliceSiteAcceptor,
     /// The variant hits a Splice donor site (defined as two bases after coding exon end, except for the last exon).
     SplitceSiteDonor,
+    /// A variant in 5′UTR region produces a three base sequence that can be a START codon.
+    StartGained,
     /// Variant causes start codon to be mutated into a non-start codon.
     StartLost,
-    /// Variant causes start codon to be mutated into another start codon.
-    SYNONYMOUS_START,
-    /// The variant hits a CDS.
-    CDS,
-    /// The variant hits a gene.
-    GENE,
-    /// The variant hits a transcript.
-    TRANSCRIPT,
-    /// The vairant hist an exon.
-    EXON,
-    /// A deletion removes the whole exon.
-    EXON_DELETED,
-    ///Variant causes a codon that produces a different amino acid
-    NON_SYNONYMOUS_CODING,
-    ///Variant causes a codon that produces the same amino acid
-    SYNONYMOUS_CODING,
-    ///Insertion or deletion causes a frame shift
-    FRAME_SHIFT,
-    ///One or many codons are changed
-    CODON_CHANGE,
-    /// One or many codons are inserted
-    CODON_INSERTION,
-    /// One codon is changed and one or many codons are inserted
-    CODON_CHANGE_PLUS_CODON_INSERTION,
-    /// One or many codons are deleted
-    CODON_DELETION,
-    ///One codon is changed and one or more codons are deleted
-    CODON_CHANGE_PLUS_CODON_DELETION,
     /// Variant causes a STOP codon
-    STOP_GAINED,
-    /// Variant causes stop codon to be mutated into another stop codon.
-    SYNONYMOUS_STOP,
+    StopGained,
     /// Variant causes stop codon to be mutated into a non-stop codon
-    STOP_LOST,
-    /// Variant hist and intron. Technically, hits no exon in the transcript.
-    INTRON,
-    /// Variant hits 3′UTR region
-    UTR_3_PRIME,
+    StopLost,
+    /// Variant causes a codon that produces the same amino acid
+    SynonymousCoding,
+    /// Variant causes start codon to be mutated into another start codon.
+    SynonymousStart,
+    /// Variant causes stop codon to be mutated into another stop codon.
+    SynonymousStop,
+    /// The variant hits a transcript.
+    Transcript,
+    /// Upstream of a gene (default length: 5K bases)
+    Upstream,
     /// The variant deletes an exon which is in the 3′UTR of the transcript
-    UTR_3_DELETED,
-    /// Downstream of a gene (default length: 5K bases)
-    DOWNSTREAM,
-    /// The variant is in a highly conserved intronic region
-    INTRON_CONSERVED,
-    /// The variant is in a highly conserved intergenic region
-    INTERGENIC_CONSERVED,
+    Utr3Deleted,
+    /// Variant hits 3′UTR region
+    Utr3Prime,
+    /// The variant deletes an exon which is in the 5′UTR of the transcript
+    Utr5Deleted,
+    /// Variant hits 5′UTR region
+    Utr5Prime,
 }
 
 /// Struct to store annotation information
@@ -77,6 +86,7 @@ pub struct AnnotationMyth {
     /// Transcript id
     pub transcript_id: Vec<u8>,
 
+    /// Store effect of this variants
     pub effects: Vec<Effect>,
 }
 
@@ -84,6 +94,26 @@ impl AnnotationMyth {
     /// Get builder of AnnotationMyth
     pub fn builder() -> AnnotationMythBuilder {
         AnnotationMythBuilder::default()
+    }
+}
+
+impl AnnotationMythBuilder {
+    /// Add Effect in AnnotationMyth
+    pub fn add_effect(&mut self, e: Effect) {
+        if let Some(effects) = &mut self.effects {
+            effects.push(e)
+        } else {
+            self.effects = Some(vec![e])
+        }
+    }
+
+    /// Extend Effect in AnnotationMyth
+    pub fn extend_effect(&mut self, e: &[Effect]) {
+        if let Some(effects) = &mut self.effects {
+            effects.extend_from_slice(e)
+        } else {
+            self.effects = Some(e.to_vec())
+        }
     }
 }
 
