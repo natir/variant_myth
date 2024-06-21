@@ -197,7 +197,7 @@ pub fn variants2myth(
 
         // 3' UTR
         if !utr3_annot.is_empty() {
-            transcript_myth.add_effect(myth::Effect::Utr5Prime)
+            transcript_myth.add_effect(myth::Effect::Utr3Prime)
         }
 
         myth.add_annotation(transcript_myth.build().unwrap()); // Build error could never append
@@ -248,6 +248,20 @@ fn exon_effect(
 
     let exon_target = options.unwrap();
 
+    // Splice junction
+    let variant_range = variant.position
+        ..(variant.position + variant.ref_seq.len().max(variant.alt_seq.len()) as u64);
+    if exon_target != 0
+        && (exons[exon_target].0.start..exons[exon_target].0.start + 2)
+            .any(|x| variant_range.contains(&x))
+    {
+        effects.push(myth::Effect::SpliceSiteAcceptor)
+    }
+    if (exons[exon_target].0.end + 2..exons[exon_target].0.end).any(|x| variant_range.contains(&x))
+    {
+        effects.push(myth::Effect::SplitceSiteDonor)
+    }
+
     // Variant only change
     let len_diff = variant.ref_seq.len().abs_diff(variant.alt_seq.len());
     if len_diff == 0 {
@@ -279,7 +293,7 @@ fn exon_effect(
         .cloned()
         .collect::<Vec<u8>>();
 
-    let aa = translate.translate(&variant_seq);
+    let _aa = translate.translate(&variant_seq);
 
     effects
 }
