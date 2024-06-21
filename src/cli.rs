@@ -38,6 +38,10 @@ pub struct Command {
     #[clap(short = 'o', long = "output")]
     output_path: std::path::PathBuf,
 
+    /// [Up|Down]stream transcript distance, default: 5,000
+    #[clap(short = 'd', long = "updown-distance")]
+    updown_distance: Option<u64>,
+
     // Generic option
     #[cfg(feature = "parallel")]
     /// Number of theard use 0 use all avaible core, default value 0
@@ -111,6 +115,11 @@ impl Command {
         let boxed = Box::new(file);
 
         Ok(std::io::BufWriter::new(boxed))
+    }
+
+    /// Get [Up|Down]stream transcript distance
+    pub fn updown_distance(&self) -> u64 {
+        self.updown_distance.unwrap_or(5000)
     }
 
     /// Get number of thread

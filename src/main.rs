@@ -61,7 +61,10 @@ fn get_database(
     translate::Translate,
 )> {
     log::info!("Start read annotations");
-    let annotations = annotations_db::AnnotationsDataBase::from_reader(params.annotations()?)?;
+    let annotations = annotations_db::AnnotationsDataBase::from_reader(
+        params.annotations()?,
+        params.updown_distance(),
+    )?;
     log::info!("End read annotations");
 
     log::info!("Start read genome reference");
@@ -85,9 +88,11 @@ fn get_database(
     translate::Translate,
 )> {
     let annot_reader = params.annotations()?;
-    let annot_thread = std::thread::spawn(|| {
+    let updown_distance = params.updown_distance();
+    let annot_thread = std::thread::spawn(move || {
         log::info!("Start read annotations");
-        let annotations = annotations_db::AnnotationsDataBase::from_reader(annot_reader)?;
+        let annotations =
+            annotations_db::AnnotationsDataBase::from_reader(annot_reader, updown_distance)?;
         log::info!("End read annotations");
 
         Ok::<annotations_db::AnnotationsDataBase, anyhow::Error>(annotations)

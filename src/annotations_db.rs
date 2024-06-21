@@ -18,6 +18,7 @@ impl AnnotationsDataBase {
     /// Build a AnnotationsDataBase from a reader
     pub fn from_reader(
         input: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>,
+        updown_distance: u64,
     ) -> error::Result<Self> {
         let mut intervals: ahash::AHashMap<
             Vec<u8>,
@@ -38,13 +39,18 @@ impl AnnotationsDataBase {
                 .entry(seqname.to_vec())
                 .and_modify(
                     |tree: &mut interval_tree::IntervalTree<u64, annotation::Annotation>| {
-                        Self::add_annotion(tree, interval.clone(), annotation.clone());
+                        Self::add_annotion(
+                            tree,
+                            interval.clone(),
+                            annotation.clone(),
+                            updown_distance,
+                        );
                     },
                 )
                 .or_insert({
                     let mut tree = interval_tree::IntervalTree::new();
 
-                    Self::add_annotion(&mut tree, interval, annotation);
+                    Self::add_annotion(&mut tree, interval, annotation, updown_distance);
                     tree
                 });
         }
@@ -72,14 +78,15 @@ impl AnnotationsDataBase {
         tree: &mut interval_tree::IntervalTree<u64, annotation::Annotation>,
         interval: interval_tree::Interval<u64>,
         annotation: annotation::Annotation,
+        updown_distance: u64,
     ) {
         if annotation.get_feature() == b"transcript" {
             tree.insert(
-                interval.start - 5000..interval.start,
+                interval.start - updown_distance..interval.start,
                 annotation::Annotation::from_annotation(&annotation, b"upstream"),
             );
             tree.insert(
-                interval.end..interval.end + 5000,
+                interval.end..interval.end + updown_distance,
                 annotation::Annotation::from_annotation(&annotation, b"downstream"),
             );
         }
