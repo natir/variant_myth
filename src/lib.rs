@@ -142,11 +142,27 @@ pub fn variants2myth(
             .collect::<Vec<(interval_tree::Interval<u64>, annotation::Strand)>>();
 
         // Edit sequence with variant
-        let sequence = sequences.get_transcript(transcript.get_seqname(), &exons);
+        let original_seq = sequences.get_transcript(transcript.get_seqname(), &exons);
 
         // Found position
+        let exon_target = exons
+            .iter()
+            .position(|e| variant.position > e.0.start && variant.position < e.0.end)
+            .unwrap_or(exons.len());
+        let transcript_pos = exons[..exon_target]
+            .iter()
+            .map(|e: &(interval_tree::Interval<u64>, annotation::Strand)| e.0.end - e.0.start)
+            .sum::<u64>()
+            + variant.position
+            - exons[exon_target].0.start;
+        let variant_seq = original_seq[..transcript_pos as usize]
+            .iter()
+            .chain(&variant.alt_seq)
+            .chain(&original_seq[transcript_pos as usize + variant.ref_seq.len()..])
+            .cloned()
+            .collect::<Vec<u8>>();
 
-        let aa = translate.translate(&sequence);
+        let aa = translate.translate(&variant_seq);
 
         // 3' UTR
 
