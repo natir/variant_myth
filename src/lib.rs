@@ -95,9 +95,13 @@ pub fn variants2myth(
 ) -> myth::Myth {
     let (seqname, interval) = variant.get_interval();
 
-    log::debug!("Variant: {:?}", variant);
+    log::debug!("Start Variant: {:?}", variant);
 
     let mut myth = myth::Myth::from_variant(variant.clone());
+
+    if variant.alt_seq.contains(&b'*') {
+        return myth;
+    }
 
     let var_annot = annotations.get_annotation(seqname, interval);
 
@@ -184,11 +188,11 @@ pub fn variants2myth(
         }
 
         // Get exon sequence
-        // if !exon_annot.is_empty() {
-        //     transcript_myth.extend_effect(
-        //         exon_effect(translate, sequences, exon_annot.as_ref(), &variant).as_ref(),
-        //     );
-        // }
+        if !exon_annot.is_empty() {
+            transcript_myth.extend_effect(
+                exon_effect(translate, sequences, exon_annot.as_ref(), &variant).as_ref(),
+            );
+        }
 
         // 3' UTR
         if !utr3_annot.is_empty() {
@@ -198,6 +202,7 @@ pub fn variants2myth(
         myth.add_annotation(transcript_myth.build().unwrap()); // Build error could never append
     }
 
+    log::debug!("End Variant: {:?}", variant);
     myth
 }
 
@@ -231,20 +236,29 @@ fn exon_effect(
     let original_seq = sequences.get_transcript(exon_annot[0].get_seqname(), &exons);
 
     // Found position
-    let exon_target = exons
+    let options = exons
         .iter()
-        .position(|e| variant.position > e.0.start && variant.position < e.0.end)
-        .unwrap_or(exons.len());
+        .position(|e| variant.position > e.0.start && variant.position < e.0.end);
+    if options.is_none() {
+        return vec![];
+    }
+    let exon_target = options.unwrap();
+
     let transcript_pos = exons[..exon_target]
         .iter()
         .map(|e: &(interval_tree::Interval<u64>, annotation::Strand)| e.0.end - e.0.start)
         .sum::<u64>()
         + variant.position
         - exons[exon_target].0.start;
+
+    let after_variant = original_seq
+        .len()
+        .min(transcript_pos as usize + variant.ref_seq.len());
+
     let variant_seq = original_seq[..transcript_pos as usize]
         .iter()
         .chain(&variant.alt_seq)
-        .chain(&original_seq[transcript_pos as usize + variant.ref_seq.len()..])
+        .chain(&original_seq[after_variant..])
         .cloned()
         .collect::<Vec<u8>>();
 

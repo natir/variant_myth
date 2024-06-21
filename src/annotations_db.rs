@@ -81,8 +81,14 @@ impl AnnotationsDataBase {
         updown_distance: u64,
     ) {
         if annotation.get_feature() == b"transcript" {
+            let upstream = if interval.start < updown_distance {
+                0
+            } else {
+                interval.start - updown_distance
+            };
+
             tree.insert(
-                interval.start - updown_distance..interval.start,
+                upstream..interval.start,
                 annotation::Annotation::from_annotation(&annotation, b"upstream"),
             );
             tree.insert(
