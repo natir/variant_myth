@@ -213,6 +213,8 @@ fn exon_effect(
     exon_annot: &[&annotation::Annotation],
     variant: &variant::Variant,
 ) -> Vec<myth::Effect> {
+    let mut effects = vec![];
+
     let mut pos_exons = exon_annot
         .iter()
         .map(|a| {
@@ -241,10 +243,24 @@ fn exon_effect(
         .iter()
         .position(|e| variant.position > e.0.start && variant.position < e.0.end);
     if options.is_none() {
-        return vec![];
+        return effects;
     }
+
     let exon_target = options.unwrap();
 
+    // Variant only change
+    let len_diff = variant.ref_seq.len().abs_diff(variant.alt_seq.len());
+    if len_diff == 0 {
+        effects.push(myth::Effect::CodonChange)
+    } else if len_diff % 3 != 0 {
+        effects.push(myth::Effect::FrameShift)
+    } else if variant.ref_seq.len() < variant.alt_seq.len() {
+        effects.push(myth::Effect::CodonInsertion)
+    } else {
+        effects.push(myth::Effect::CodonDeletion)
+    }
+
+    // Get sequence
     let transcript_pos = exons[..exon_target]
         .iter()
         .map(|e: &(interval_tree::Interval<u64>, annotation::Strand)| e.0.end - e.0.start)
@@ -263,9 +279,9 @@ fn exon_effect(
         .cloned()
         .collect::<Vec<u8>>();
 
-    let _aa = translate.translate(&variant_seq);
+    let aa = translate.translate(&variant_seq);
 
-    vec![]
+    effects
 }
 
 fn serialize_bstr<T, S>(v: T, serializer: S) -> Result<S::Ok, S::Error>
