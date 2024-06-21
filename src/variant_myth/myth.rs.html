@@ -138,6 +138,11 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A Myth store annotation about a variant.
 
 </span><span class="comment">/* std use */
@@ -225,6 +230,11 @@
     <span class="attr">#[serde(serialize_with = <span class="string">"crate::serialize_bstr"</span>)]
     </span><span class="doccomment">/// Transcript id
     </span><span class="kw">pub </span>transcript_id: Vec&lt;u8&gt;,
+
+    <span class="attr">#[serde(serialize_with = <span class="string">"crate::serialize_bstr"</span>)]
+    #[builder(default)]
+    </span><span class="doccomment">/// Gene name
+    </span><span class="kw">pub </span>gene_name: Vec&lt;u8&gt;,
 
     <span class="doccomment">/// Store effect of this variants
     </span><span class="kw">pub </span>effects: Vec&lt;Effect&gt;,

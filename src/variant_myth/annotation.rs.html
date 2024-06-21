@@ -238,6 +238,15 @@
 <a href="#238" id="238">238</a>
 <a href="#239" id="239">239</a>
 <a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Struct to store annotation
 
 </span><span class="comment">/* std use */
@@ -295,7 +304,7 @@
 </span><span class="kw">pub struct </span>Attribute {
     gene_id: Vec&lt;u8&gt;,
     transcript_id: Vec&lt;u8&gt;,
-    gene_name: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+    gene_name: Vec&lt;u8&gt;,
     exon_number: <span class="prelude-ty">Option</span>&lt;u64&gt;,
     exon_id: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
@@ -314,7 +323,7 @@
                     obj.transcript_id = value.to_vec()
                 }
                 [<span class="string">b'g'</span>, <span class="string">b'e'</span>, <span class="string">b'n'</span>, <span class="string">b'e'</span>, <span class="string">b'_'</span>, <span class="string">b'n'</span>, <span class="string">b'a'</span>, <span class="string">b'm'</span>, <span class="string">b'e'</span>, <span class="string">b'='</span>, value @ ..] =&gt; {
-                    obj.gene_name = <span class="prelude-val">Some</span>(value.to_vec())
+                    obj.gene_name = value.to_vec()
                 }
                 [<span class="string">b'e'</span>, <span class="string">b'x'</span>, <span class="string">b'o'</span>, <span class="string">b'n'</span>, <span class="string">b'_'</span>, <span class="string">b'n'</span>, <span class="string">b'u'</span>, <span class="string">b'm'</span>, <span class="string">b'b'</span>, <span class="string">b'e'</span>, <span class="string">b'r'</span>, <span class="string">b'='</span>, value @ ..] =&gt; {
                     obj.exon_number =
@@ -338,6 +347,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.transcript_id
     }
 
+    <span class="doccomment">/// Get gene name
+    </span><span class="kw">pub fn </span>get_gene_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.gene_name
+    }
+
     <span class="doccomment">/// Get exon_number
     </span><span class="kw">pub fn </span>get_exon_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.exon_number.unwrap_or(<span class="number">0</span>)
@@ -352,8 +366,12 @@
             String::from_utf8(<span class="self">self</span>.gene_id.to_vec()).unwrap(),
             String::from_utf8(<span class="self">self</span>.transcript_id.to_vec()).unwrap(),
         )<span class="question-mark">?</span>;
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(gn) = <span class="kw-2">&amp;</span><span class="self">self</span>.gene_name {
-            <span class="macro">write!</span>(f, <span class="string">";gene_name={}"</span>, String::from_utf8(gn.to_vec()).unwrap())<span class="question-mark">?</span>;
+        <span class="kw">if </span>!<span class="self">self</span>.gene_name.is_empty() {
+            <span class="macro">write!</span>(
+                f,
+                <span class="string">";gene_name={}"</span>,
+                String::from_utf8(<span class="self">self</span>.gene_name.to_vec()).unwrap()
+            )<span class="question-mark">?</span>;
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(en) = <span class="kw-2">&amp;</span><span class="self">self</span>.exon_number {
             <span class="macro">write!</span>(f, <span class="string">";exon_number={}"</span>, en)<span class="question-mark">?</span>;
