@@ -275,6 +275,22 @@
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A variant annotator.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -490,6 +506,8 @@
     exon_annot: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>annotation::Annotation],
     variant: <span class="kw-2">&amp;</span>variant::Variant,
 ) -&gt; Vec&lt;myth::Effect&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>effects = <span class="macro">vec!</span>[];
+
     <span class="kw">let </span><span class="kw-2">mut </span>pos_exons = exon_annot
         .iter()
         .map(|a| {
@@ -518,11 +536,25 @@
         .iter()
         .position(|e| variant.position &gt; e.<span class="number">0</span>.start &amp;&amp; variant.position &lt; e.<span class="number">0</span>.end);
     <span class="kw">if </span>options.is_none() {
-        <span class="kw">return </span><span class="macro">vec!</span>[];
+        <span class="kw">return </span>effects;
     }
+
     <span class="kw">let </span>exon_target = options.unwrap();
 
-    <span class="kw">let </span>transcript_pos = exons[..exon_target]
+    <span class="comment">// Variant only change
+    </span><span class="kw">let </span>len_diff = variant.ref_seq.len().abs_diff(variant.alt_seq.len());
+    <span class="kw">if </span>len_diff == <span class="number">0 </span>{
+        effects.push(myth::Effect::CodonChange)
+    } <span class="kw">else if </span>len_diff % <span class="number">3 </span>!= <span class="number">0 </span>{
+        effects.push(myth::Effect::FrameShift)
+    } <span class="kw">else if </span>variant.ref_seq.len() &lt; variant.alt_seq.len() {
+        effects.push(myth::Effect::CodonInsertion)
+    } <span class="kw">else </span>{
+        effects.push(myth::Effect::CodonDeletion)
+    }
+
+    <span class="comment">// Get sequence
+    </span><span class="kw">let </span>transcript_pos = exons[..exon_target]
         .iter()
         .map(|e: <span class="kw-2">&amp;</span>(interval_tree::Interval&lt;u64&gt;, annotation::Strand)| e.<span class="number">0</span>.end - e.<span class="number">0</span>.start)
         .sum::&lt;u64&gt;()
@@ -540,9 +572,9 @@
         .cloned()
         .collect::&lt;Vec&lt;u8&gt;&gt;();
 
-    <span class="kw">let </span>_aa = translate.translate(<span class="kw-2">&amp;</span>variant_seq);
+    <span class="kw">let </span>aa = translate.translate(<span class="kw-2">&amp;</span>variant_seq);
 
-    <span class="macro">vec!</span>[]
+    effects
 }
 
 <span class="kw">fn </span>serialize_bstr&lt;T, S&gt;(v: T, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
