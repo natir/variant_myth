@@ -60,16 +60,16 @@ fn get_database(
     sequences_db::SequencesDataBase,
     translate::Translate,
 )> {
+    log::info!("Start read genome reference");
+    let sequences = sequences_db::SequencesDataBase::from_reader(params.reference()?)?;
+    log::info!("End read genome reference");
+
     log::info!("Start read annotations");
     let annotations = annotations_db::AnnotationsDataBase::from_reader(
         params.annotations()?,
         params.updown_distance(),
     )?;
     log::info!("End read annotations");
-
-    log::info!("Start read genome reference");
-    let sequences = sequences_db::SequencesDataBase::from_reader(params.reference()?)?;
-    log::info!("End read genome reference");
 
     log::info!("Start read translation table");
     let translate = translate::Translate::from_reader(params.translate()?)?;
@@ -87,6 +87,15 @@ fn get_database(
     sequences_db::SequencesDataBase,
     translate::Translate,
 )> {
+    let seq_reader = params.reference()?;
+    let seq_thread = std::thread::spawn(|| {
+        log::info!("Start read genome reference");
+        let sequences = sequences_db::SequencesDataBase::from_reader(seq_reader)?;
+        log::info!("End read genome reference");
+
+        Ok::<sequences_db::SequencesDataBase, anyhow::Error>(sequences)
+    });
+
     let annot_reader = params.annotations()?;
     let updown_distance = params.updown_distance();
     let annot_thread = std::thread::spawn(move || {
@@ -96,15 +105,6 @@ fn get_database(
         log::info!("End read annotations");
 
         Ok::<annotations_db::AnnotationsDataBase, anyhow::Error>(annotations)
-    });
-
-    let seq_reader = params.reference()?;
-    let seq_thread = std::thread::spawn(|| {
-        log::info!("Start read genome reference");
-        let sequences = sequences_db::SequencesDataBase::from_reader(seq_reader)?;
-        log::info!("End read genome reference");
-
-        Ok::<sequences_db::SequencesDataBase, anyhow::Error>(sequences)
     });
 
     let translate_reader = params.translate()?;

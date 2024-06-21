@@ -86,6 +86,11 @@ pub struct AnnotationMyth {
     /// Transcript id
     pub transcript_id: Vec<u8>,
 
+    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[builder(default)]
+    /// Gene name
+    pub gene_name: Vec<u8>,
+
     /// Store effect of this variants
     pub effects: Vec<Effect>,
 }

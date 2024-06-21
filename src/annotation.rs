@@ -55,7 +55,7 @@ impl std::fmt::Display for Frame {
 pub struct Attribute {
     gene_id: Vec<u8>,
     transcript_id: Vec<u8>,
-    gene_name: Option<Vec<u8>>,
+    gene_name: Vec<u8>,
     exon_number: Option<u64>,
     exon_id: Option<Vec<u8>>,
 }
@@ -74,7 +74,7 @@ impl Attribute {
                     obj.transcript_id = value.to_vec()
                 }
                 [b'g', b'e', b'n', b'e', b'_', b'n', b'a', b'm', b'e', b'=', value @ ..] => {
-                    obj.gene_name = Some(value.to_vec())
+                    obj.gene_name = value.to_vec()
                 }
                 [b'e', b'x', b'o', b'n', b'_', b'n', b'u', b'm', b'b', b'e', b'r', b'=', value @ ..] => {
                     obj.exon_number =
@@ -98,6 +98,11 @@ impl Attribute {
         &self.transcript_id
     }
 
+    /// Get gene name
+    pub fn get_gene_name(&self) -> &[u8] {
+        &self.gene_name
+    }
+
     /// Get exon_number
     pub fn get_exon_number(&self) -> u64 {
         self.exon_number.unwrap_or(0)
@@ -112,8 +117,12 @@ impl std::fmt::Display for Attribute {
             String::from_utf8(self.gene_id.to_vec()).unwrap(),
             String::from_utf8(self.transcript_id.to_vec()).unwrap(),
         )?;
-        if let Some(gn) = &self.gene_name {
-            write!(f, ";gene_name={}", String::from_utf8(gn.to_vec()).unwrap())?;
+        if !self.gene_name.is_empty() {
+            write!(
+                f,
+                ";gene_name={}",
+                String::from_utf8(self.gene_name.to_vec()).unwrap()
+            )?;
         }
         if let Some(en) = &self.exon_number {
             write!(f, ";exon_number={}", en)?;

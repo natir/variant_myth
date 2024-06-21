@@ -148,6 +148,7 @@ pub fn variants2myth(
         let mut transcript_myth = myth::AnnotationMyth::builder()
             .source(transcript.get_source().to_vec())
             .transcript_id(transcript.get_transcript_id().to_vec())
+            .gene_name(transcript.get_attribute().get_gene_name().to_vec())
             .effects(vec![myth::Effect::Transcript]);
 
         let transcript_annot = annotations
