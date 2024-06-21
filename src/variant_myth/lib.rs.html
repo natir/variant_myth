@@ -291,6 +291,20 @@
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A variant annotator.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -490,7 +504,7 @@
 
         <span class="comment">// 3' UTR
         </span><span class="kw">if </span>!utr3_annot.is_empty() {
-            transcript_myth.add_effect(myth::Effect::Utr5Prime)
+            transcript_myth.add_effect(myth::Effect::Utr3Prime)
         }
 
         myth.add_annotation(transcript_myth.build().unwrap()); <span class="comment">// Build error could never append
@@ -541,6 +555,20 @@
 
     <span class="kw">let </span>exon_target = options.unwrap();
 
+    <span class="comment">// Splice junction
+    </span><span class="kw">let </span>variant_range = variant.position
+        ..(variant.position + variant.ref_seq.len().max(variant.alt_seq.len()) <span class="kw">as </span>u64);
+    <span class="kw">if </span>exon_target != <span class="number">0
+        </span>&amp;&amp; (exons[exon_target].<span class="number">0</span>.start..exons[exon_target].<span class="number">0</span>.start + <span class="number">2</span>)
+            .any(|x| variant_range.contains(<span class="kw-2">&amp;</span>x))
+    {
+        effects.push(myth::Effect::SpliceSiteAcceptor)
+    }
+    <span class="kw">if </span>(exons[exon_target].<span class="number">0</span>.end + <span class="number">2</span>..exons[exon_target].<span class="number">0</span>.end).any(|x| variant_range.contains(<span class="kw-2">&amp;</span>x))
+    {
+        effects.push(myth::Effect::SplitceSiteDonor)
+    }
+
     <span class="comment">// Variant only change
     </span><span class="kw">let </span>len_diff = variant.ref_seq.len().abs_diff(variant.alt_seq.len());
     <span class="kw">if </span>len_diff == <span class="number">0 </span>{
@@ -572,7 +600,7 @@
         .cloned()
         .collect::&lt;Vec&lt;u8&gt;&gt;();
 
-    <span class="kw">let </span>aa = translate.translate(<span class="kw-2">&amp;</span>variant_seq);
+    <span class="kw">let </span>_aa = translate.translate(<span class="kw-2">&amp;</span>variant_seq);
 
     effects
 }
