@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"variant_myth":[["impl&lt;R&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.79.0/core/iter/traits/iterator/trait.Iterator.html\" title=\"trait core::iter::traits::iterator::Iterator\">Iterator</a> for <a class=\"struct\" href=\"variant_myth/variant/struct.VcfReader.html\" title=\"struct variant_myth::variant::VcfReader\">VcfReader</a>&lt;R&gt;<div class=\"where\">where\n    R: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.79.0/std/io/trait.BufRead.html\" title=\"trait std::io::BufRead\">BufRead</a>,</div>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

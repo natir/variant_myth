@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"variant_myth":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.79.0/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"variant_myth/error/enum.Error.html\" title=\"enum variant_myth::error::Error\">Error</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.79.0/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"variant_myth/myth/enum.AnnotationMythBuilderError.html\" title=\"enum variant_myth::myth::AnnotationMythBuilderError\">AnnotationMythBuilderError</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

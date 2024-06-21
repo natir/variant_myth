@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AnnotationMythBuilderError"],"struct":["AnnotationMyth","AnnotationMythBuilder","Myth"]};

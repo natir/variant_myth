@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["variants2myth","vcf2json"],"mod":["annotation","annotations_db","cli","error","interval_tree","myth","sequences_db","translate","variant"]};

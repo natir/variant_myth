@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["rev_comp"],"struct":["SequencesDataBase"]};
