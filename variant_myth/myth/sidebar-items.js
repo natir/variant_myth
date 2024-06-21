@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["AnnotationMythBuilderError"],"struct":["AnnotationMyth","AnnotationMythBuilder","Myth"]};
+window.SIDEBAR_ITEMS = {"enum":["AnnotationMythBuilderError","Effect"],"struct":["AnnotationMyth","AnnotationMythBuilder","Myth"]};

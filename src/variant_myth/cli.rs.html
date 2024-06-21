@@ -134,6 +134,15 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Command Line Interface declaration of project variant_myth
 
 </span><span class="comment">/* std use */
@@ -173,6 +182,10 @@
     <span class="doccomment">/// Output path
     </span><span class="attr">#[clap(short = <span class="string">'o'</span>, long = <span class="string">"output"</span>)]
     </span>output_path: std::path::PathBuf,
+
+    <span class="doccomment">/// [Up|Down]stream transcript distance, default: 5,000
+    </span><span class="attr">#[clap(short = <span class="string">'d'</span>, long = <span class="string">"updown-distance"</span>)]
+    </span>updown_distance: <span class="prelude-ty">Option</span>&lt;u64&gt;,
 
     <span class="comment">// Generic option
     </span><span class="attr">#[cfg(feature = <span class="string">"parallel"</span>)]
@@ -247,6 +260,11 @@
         <span class="kw">let </span>boxed = Box::new(file);
 
         <span class="prelude-val">Ok</span>(std::io::BufWriter::new(boxed))
+    }
+
+    <span class="doccomment">/// Get [Up|Down]stream transcript distance
+    </span><span class="kw">pub fn </span>updown_distance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.updown_distance.unwrap_or(<span class="number">5000</span>)
     }
 
     <span class="doccomment">/// Get number of thread

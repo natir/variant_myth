@@ -231,6 +231,13 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Struct to store annotation
 
 </span><span class="comment">/* std use */
@@ -409,6 +416,13 @@
             },
             attribute: Attribute::from_u8_slice(record.get(<span class="number">8</span>).unwrap())<span class="question-mark">?</span>,
         })
+    }
+
+    <span class="doccomment">/// Build annotation from another Annotation and set feature
+    </span><span class="kw">pub fn </span>from_annotation(a: <span class="kw-2">&amp;</span><span class="self">Self</span>, feature: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>obj = a.clone();
+        obj.feature = feature.to_vec();
+        obj
     }
 
     <span class="doccomment">/// Create interval associate with annotation
