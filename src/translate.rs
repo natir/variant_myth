@@ -34,6 +34,15 @@ pub struct Translate {
     end: [bool; 64],
 }
 
+/// File content of standard translate table
+pub const STANDARD: &[u8] =
+    b"    AAs  = FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG
+  Starts = ---M------**--*----M---------------M----------------------------
+  Base1  = TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG
+  Base2  = TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG
+  Base3  = TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG
+";
+
 impl Translate {
     /// Build a Translate table from a reader
     pub fn from_reader(
@@ -105,8 +114,15 @@ impl Translate {
     }
 }
 
+impl std::default::Default for Translate {
+    fn default() -> Self {
+        // standard value so no error
+        Translate::from_reader(std::io::BufReader::new(Box::new(STANDARD))).unwrap()
+    }
+}
+
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     /* std use */
 
     /* crate use */
@@ -115,17 +131,9 @@ mod tests {
     /* project use */
     use super::*;
 
-    const STANDARD: &[u8] =
-        b"    AAs  = FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG
-  Starts = ---M------**--*----M---------------M----------------------------
-  Base1  = TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG
-  Base2  = TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG
-  Base3  = TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG
-";
-
     #[test]
     fn check_table() -> error::Result<()> {
-        let trans = Translate::from_reader(std::io::BufReader::new(Box::new(STANDARD)))?;
+        let trans = Translate::default();
 
         assert_eq!(trans.get_aa(&[b'T', b'T', b'T']), b'F');
         assert_eq!(trans.get_aa(&[b'A', b'T', b'G']), b'M');

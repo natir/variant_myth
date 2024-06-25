@@ -1,0 +1,11 @@
+[not_parallel]
+features = ""
+engine = "Llvm"
+
+[parallel]
+features = "parallel"
+engine = "Llvm"
+
+[report]
+output-dir = "target/coverage/"
+out = [ "Html" ]

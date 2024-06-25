@@ -100,3 +100,60 @@ impl AnnotationsDataBase {
         tree.insert(interval.clone(), annotation.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+
+    use crate::annotation::Annotation;
+
+    /* project use */
+    use super::*;
+
+    const DATA: &[u8] = b"chr1\tknownGene\ttranscript\t11869\t14409\t.\t+\t.\tgene_id=gene1
+chr1\tknownGene\texon\t11869\t12227\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=1;exon_id=gene1.1
+chr1\tknownGene\texon\t12613\t12721\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=2;exon_id=gene1.2
+chr1\tknownGene\texon\t13221\t14409\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=3;exon_id=gene1.3
+chr1\tknownGene\ttranscript\t17369\t17436\t.\t-\t.\tgene_id=gene2;transcript_id=gene2
+chr1\tknownGene\texon\t17369\t17436\t.\t-\t.\tgene_id=gene2;transcript_id=gene2;exon_number=1;exon_id=gene2.1
+chr1\tknownGene\ttranscript\t29554\t31097\t.\t+\t.\tgene_id=gene3;transcript_id=gene3
+chr1\tknownGene\texon\t29554\t30039\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=1;exon_id=gene3.1
+chr1\tknownGene\texon\t30564\t30667\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=2;exon_id=gene3.2
+chr1\tknownGene\texon\t30976\t31097\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3
+chr2\ttest\ttranscript\t50\t200\t.\t-\t.\tgene_id=gene4";
+
+    #[test]
+    fn annotations() -> error::Result<()> {
+        let annotations =
+            AnnotationsDataBase::from_reader(std::io::BufReader::new(Box::new(DATA)), 100)?;
+
+        let b1 = Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(DATA[..57].to_vec())
+                .unwrap()
+                .split("\t")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+        println!("{}", String::from_utf8(DATA[262..363].to_vec()).unwrap());
+        let b2 = Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(DATA[262..363].to_vec())
+                .unwrap()
+                .split("\t")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        let truth = vec![&b1, &b2];
+        assert_eq!(annotations.get_annotation(b"chr1", 14000..14001), truth);
+
+        // seqname not present
+        assert_eq!(
+            annotations.get_annotation(b"chrX", 14000..14001),
+            Vec::<&annotation::Annotation>::new()
+        );
+
+        Ok(())
+    }
+}

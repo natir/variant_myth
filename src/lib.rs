@@ -93,7 +93,8 @@ pub fn variants2myth(
     translate: &translate::Translate,
     variant: variant::Variant,
 ) -> myth::Myth {
-    let (seqname, interval) = variant.get_interval();
+    let seqname = variant.seqname.to_vec();
+    let interval = variant.get_interval();
 
     log::debug!("Start Variant: {:?}", variant);
 
@@ -103,7 +104,7 @@ pub fn variants2myth(
         return myth;
     }
 
-    let var_annot = annotations.get_annotation(seqname, interval);
+    let var_annot = annotations.get_annotation(&seqname, interval);
 
     if var_annot.is_empty() {
         myth.add_annotation(
@@ -173,7 +174,7 @@ pub fn variants2myth(
 
         let exon_annot = transcript_annot
             .iter()
-            .filter(|a| a.get_feature() == b"5UTR")
+            .filter(|a| a.get_feature() == b"exon")
             .cloned()
             .collect::<Vec<&annotation::Annotation>>();
 
@@ -251,15 +252,21 @@ fn exon_effect(
     // Splice junction
     let variant_range = variant.position
         ..(variant.position + variant.ref_seq.len().max(variant.alt_seq.len()) as u64);
+
+    println!("{:?}", variant);
+    println!("{:?}", variant_range);
+    println!("{:?}", exon_target);
+    println!("{:?}", exons);
+    println!("{:?}", exons[exon_target]);
     if exon_target != 0
         && (exons[exon_target].0.start..exons[exon_target].0.start + 2)
             .any(|x| variant_range.contains(&x))
     {
         effects.push(myth::Effect::SpliceSiteAcceptor)
     }
-    if (exons[exon_target].0.end + 2..exons[exon_target].0.end).any(|x| variant_range.contains(&x))
+    if (exons[exon_target].0.end - 2..exons[exon_target].0.end).any(|x| variant_range.contains(&x))
     {
-        effects.push(myth::Effect::SplitceSiteDonor)
+        effects.push(myth::Effect::SpliceSiteDonor)
     }
 
     // Variant only change
@@ -304,4 +311,143 @@ where
     S: serde::Serializer,
 {
     serializer.serialize_str(unsafe { std::str::from_utf8_unchecked(v.as_ref()) })
+}
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+    use biotest::Format as _;
+    use bstr::ByteSlice as _;
+
+    /* project use */
+    use super::*;
+
+    const GFF: &[u8] = b"{0}	knownGene	transcript	11869	14409	.	+	.	gene_id=gene1;transcript_id=gene1
+{0}	knownGene	exon	11869	12227	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=1;exon_id=gene1.1
+{0}	knownGene	exon	12613	12721	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=2;exon_id=gene1.2
+{0}	knownGene	exon	13221	14409	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=3;exon_id=gene1.3
+{0}	knownGene	transcript	17369	17436	.	-	.	gene_id=gene2;transcript_id=gene2
+{0}	knownGene	exon	17369	17436	.	-	.	gene_id=gene2;transcript_id=gene2;exon_number=1;exon_id=gene2.1
+{0}	knownGene	transcript	29554	31097	.	+	.	gene_id=gene3;transcript_id=gene3
+{0}	knownGene	exon	29554	30039	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=1;exon_id=gene3.1
+{0}	knownGene	exon	30564	30667	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=2;exon_id=gene3.2
+{0}	knownGene	exon	30976	31097	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3";
+
+    #[test]
+    fn variant_annotation() -> error::Result<()> {
+        // generate fasta
+        let mut rng = biotest::rand();
+        let seq_gen = biotest::Fasta::builder().sequence_len(40_000).build()?;
+        let mut fasta_reader = vec![];
+        seq_gen.record(&mut fasta_reader, &mut rng)?;
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(std::io::Cursor::new(fasta_reader.clone())));
+
+        // produce gff
+        let gff_reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(std::io::Cursor::new(
+                GFF.replace(b"{0}", &fasta_reader[1..11]),
+            )));
+        let annotations_db = annotations_db::AnnotationsDataBase::from_reader(gff_reader, 100)?;
+
+        // produce sequence db
+        let seq_db = sequences_db::SequencesDataBase::from_reader(reader)?;
+        // produce translate worker
+        let translate = translate::Translate::default();
+
+        // target variant
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 29654,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"a".to_vec(),
+        };
+
+        let exon_annot = annotations_db
+            .get_annotation(&fasta_reader[1..11], 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(effects, vec![myth::Effect::CodonChange]);
+
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 30565,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"a".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(
+            effects,
+            vec![myth::Effect::SpliceSiteAcceptor, myth::Effect::CodonChange]
+        );
+
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 30665,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"a".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(
+            effects,
+            vec![myth::Effect::SpliceSiteDonor, myth::Effect::CodonChange]
+        );
+
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 29654,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"aa".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(effects, vec![myth::Effect::FrameShift]);
+
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 29654,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"caaa".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(effects, vec![myth::Effect::CodonInsertion]);
+
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 29654,
+            ref_seq: b"caaa".to_vec(),
+            alt_seq: b"c".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(effects, vec![myth::Effect::CodonDeletion]);
+
+        let variant = variant::Variant {
+            seqname: fasta_reader[1..11].to_vec(),
+            position: 30100,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"c".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+
+        assert_eq!(effects, vec![]);
+
+        Ok(())
+    }
 }

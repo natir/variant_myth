@@ -7,7 +7,7 @@
 /* project use */
 use crate::error;
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, PartialEq)]
 /// Store Variant content
 pub struct Variant {
     #[serde(serialize_with = "crate::serialize_bstr")]
@@ -43,11 +43,8 @@ impl Variant {
     }
 
     /// Create interval associate with variant
-    pub fn get_interval(&self) -> (&[u8], core::ops::Range<u64>) {
-        (
-            &self.seqname,
-            self.position..self.position + self.ref_seq.len() as u64,
-        )
+    pub fn get_interval(&self) -> core::ops::Range<u64> {
+        self.position..self.position + self.ref_seq.len() as u64
     }
 }
 
@@ -55,7 +52,7 @@ impl std::fmt::Debug for Variant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         write!(
             f,
-            "{} {} {} {}",
+            "Variant {{ seqname: b\"{}\".to_vec(), position: {}, ref_seq: b\"{}\".to_vec(), , alt_seq: b\"{}\".to_vec }}" ,
             String::from_utf8(self.seqname.to_vec()).unwrap(),
             self.position,
             String::from_utf8(self.ref_seq.to_vec()).unwrap(),
@@ -101,5 +98,72 @@ where
             Ok(false) => None,
             Err(e) => Some(Err(e.into())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+    use biotest::Format as _;
+
+    /* project use */
+    use super::*;
+
+    #[test]
+    fn variant() -> error::Result<()> {
+        let mut rng = biotest::rand();
+        let generator = biotest::Vcf::default();
+
+        let mut input = vec![];
+        generator.records(&mut input, &mut rng, 5)?;
+
+        let reader = VcfReader::from_reader(std::io::Cursor::new(input));
+
+        let records = reader
+            .into_iter()
+            .collect::<error::Result<Vec<Variant>>>()?;
+
+        assert_eq!(
+            records,
+            vec![
+                Variant {
+                    seqname: b"YAR028W".to_vec(),
+                    position: 509242864,
+                    ref_seq: b"A".to_vec(),
+                    alt_seq: b".".to_vec(),
+                },
+                Variant {
+                    seqname: b"93".to_vec(),
+                    position: 2036067340,
+                    ref_seq: b"T".to_vec(),
+                    alt_seq: b".".to_vec()
+                },
+                Variant {
+                    seqname: b"X".to_vec(),
+                    position: 2138516245,
+                    ref_seq: b"A".to_vec(),
+                    alt_seq: b".".to_vec()
+                },
+                Variant {
+                    seqname: b"NC_000015.10".to_vec(),
+                    position: 1204106469,
+                    ref_seq: b"c".to_vec(),
+                    alt_seq: b".".to_vec()
+                },
+                Variant {
+                    seqname: b"NC_016845.1".to_vec(),
+                    position: 1745241132,
+                    ref_seq: b"c".to_vec(),
+                    alt_seq: b".".to_vec()
+                }
+            ]
+        );
+
+        assert_eq!(records[1].get_interval(), (2036067340u64..2036067341u64));
+
+        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516245, ref_seq: b\"A\".to_vec(), , alt_seq: b\".\".to_vec }".to_string());
+        Ok(())
     }
 }

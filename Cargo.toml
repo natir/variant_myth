@@ -50,8 +50,9 @@ stderrlog      = { version = "0.5" }
 
 [dev-dependencies]
 criterion      = { version = "0.5" }
-rand           = { version = "0.8" }
-biotest        = { version = "0.2", features = ["sequence"] }
+biotest        = { version = "0.2", features = ["sequence", "vcf", "fasta"] }
+assert_cmd     = { version = "2" }
+tempfile       = { version = "3" }
 
 [[bench]]
 name = "interval_build"
@@ -73,3 +74,6 @@ incremental = false
 [profile.profiling]
 inherits = "release"
 debug = true
+
+[package.metadata.cargo-all-features]
+skip_optional_dependencies = true

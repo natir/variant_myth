@@ -93,3 +93,58 @@ impl SequencesDataBase {
         transcript
     }
 }
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+    use biotest::Format as _;
+
+    /* project use */
+    use super::*;
+
+    #[test]
+    fn sequence_db() -> error::Result<()> {
+        let mut rng = biotest::rand();
+        let generator = biotest::Fasta::default();
+
+        let mut temp_input = vec![];
+        generator.records(&mut temp_input, &mut rng, 5)?;
+        let input: std::io::BufReader<Box<dyn std::io::Read + Send>> =
+            std::io::BufReader::new(Box::new(std::io::Cursor::new(temp_input.to_vec())));
+
+        let sequences = SequencesDataBase::from_reader(input)?;
+
+        assert_eq!(
+            sequences.get_interval(b"RGKPRHQMHK", &(50..60)).unwrap(),
+            b"GTAGCTGTCC".to_vec()
+        );
+
+        assert_eq!(
+            sequences.get_transcript(
+                b"ELUFGTSRIU",
+                &vec![
+                    (1..5u64, annotation::Strand::Forward),
+                    (20..25u64, annotation::Strand::Reverse),
+                    (32..35u64, annotation::Strand::Forward)
+                ]
+            ),
+            b"taTgTTgccTct".to_vec()
+        );
+
+        assert_eq!(
+            sequences.get_transcript(
+                b"chr1",
+                &vec![
+                    (1..5u64, annotation::Strand::Forward),
+                    (20..25u64, annotation::Strand::Reverse),
+                    (32..35u64, annotation::Strand::Forward)
+                ]
+            ),
+            b"".to_vec()
+        );
+
+        Ok(())
+    }
+}

@@ -8,7 +8,7 @@
 use crate::variant;
 
 /// Effect of variant
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
 pub enum Effect {
     /// The variant hits a CDS.
     Cds,
@@ -45,7 +45,7 @@ pub enum Effect {
     /// The variant hits a splice acceptor site (defined as two bases before exon start, except for the first exon).
     SpliceSiteAcceptor,
     /// The variant hits a Splice donor site (defined as two bases after coding exon end, except for the last exon).
-    SplitceSiteDonor,
+    SpliceSiteDonor,
     /// A variant in 5′UTR region produces a three base sequence that can be a START codon.
     StartGained,
     /// Variant causes start codon to be mutated into a non-start codon.
@@ -75,7 +75,7 @@ pub enum Effect {
 }
 
 /// Struct to store annotation information
-#[derive(Debug, serde::Serialize, derive_builder::Builder, Clone)]
+#[derive(Debug, serde::Serialize, derive_builder::Builder, Clone, PartialEq)]
 #[builder(pattern = "owned")]
 pub struct AnnotationMyth {
     #[serde(serialize_with = "crate::serialize_bstr")]
@@ -123,7 +123,7 @@ impl AnnotationMythBuilder {
 }
 
 /// Store information around variant
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq)]
 pub struct Myth {
     variant: variant::Variant,
     annotations: Vec<AnnotationMyth>,
@@ -141,5 +141,125 @@ impl Myth {
     /// Add transcript from source
     pub fn add_annotation(&mut self, source: AnnotationMyth) {
         self.annotations.push(source);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+
+    /* project use */
+    use super::*;
+
+    #[test]
+    fn annotation_myth() {
+        let annotation = AnnotationMyth::builder()
+            .source(b"test".to_vec())
+            .transcript_id(b"gene1".to_vec())
+            .effects(vec![])
+            .build()
+            .unwrap();
+
+        assert_eq!(annotation.source, b"test".to_vec());
+        assert_eq!(annotation.transcript_id, b"gene1".to_vec());
+        assert_eq!(annotation.gene_name, Vec::<u8>::new());
+        assert_eq!(annotation.effects, Vec::<Effect>::new());
+
+        let mut annotation = AnnotationMyth::builder()
+            .source(b"test".to_vec())
+            .transcript_id(b"gene1".to_vec());
+
+        annotation.add_effect(Effect::Cds);
+        annotation.add_effect(Effect::Exon);
+
+        assert_eq!(
+            annotation.build().unwrap(),
+            AnnotationMyth {
+                source: b"test".to_vec(),
+                transcript_id: b"gene1".to_vec(),
+                gene_name: b"".to_vec(),
+                effects: vec![Effect::Cds, Effect::Exon],
+            }
+        );
+
+        let mut annotation = AnnotationMyth::builder()
+            .source(b"test".to_vec())
+            .transcript_id(b"gene1".to_vec());
+
+        annotation.extend_effect(&[Effect::Cds, Effect::Exon]);
+
+        assert_eq!(
+            annotation.build().unwrap(),
+            AnnotationMyth {
+                source: b"test".to_vec(),
+                transcript_id: b"gene1".to_vec(),
+                gene_name: b"".to_vec(),
+                effects: vec![Effect::Cds, Effect::Exon],
+            }
+        )
+    }
+
+    #[test]
+    fn myth() {
+        let mut annotation = AnnotationMyth::builder()
+            .source(b"test".to_vec())
+            .transcript_id(b"gene1".to_vec());
+
+        annotation.add_effect(Effect::Cds);
+        annotation.add_effect(Effect::Exon);
+
+        let mut myth = Myth::from_variant(variant::Variant {
+            seqname: b"93".to_vec(),
+            position: 2036067340,
+            ref_seq: b"T".to_vec(),
+            alt_seq: b".".to_vec(),
+        });
+
+        myth.add_annotation(annotation.build().unwrap());
+
+        assert_eq!(
+            myth,
+            Myth {
+                variant: variant::Variant {
+                    seqname: b"93".to_vec(),
+                    position: 2036067340,
+                    ref_seq: b"T".to_vec(),
+                    alt_seq: b".".to_vec(),
+                },
+                annotations: vec![AnnotationMyth {
+                    source: b"test".to_vec(),
+                    transcript_id: b"gene1".to_vec(),
+                    gene_name: b"".to_vec(),
+                    effects: vec![Effect::Cds, Effect::Exon]
+                }]
+            }
+        );
+    }
+
+    #[test]
+    fn json_serde() -> crate::error::Result<()> {
+        let mut annotation = AnnotationMyth::builder()
+            .source(b"test".to_vec())
+            .transcript_id(b"gene1".to_vec());
+
+        annotation.add_effect(Effect::Cds);
+        annotation.add_effect(Effect::Exon);
+
+        let mut myth = Myth::from_variant(variant::Variant {
+            seqname: b"93".to_vec(),
+            position: 2036067340,
+            ref_seq: b"T".to_vec(),
+            alt_seq: b".".to_vec(),
+        });
+
+        myth.add_annotation(annotation.build().unwrap());
+
+        let mut json = vec![];
+        serde_json::to_writer(&mut json, &myth)?;
+        assert_eq!(json, b"{\"variant\":{\"seqname\":\"93\",\"position\":2036067340,\"ref_seq\":\"T\",\"alt_seq\":\".\"},\"annotations\":[{\"source\":\"test\",\"transcript_id\":\"gene1\",\"gene_name\":\"\",\"effects\":[\"Cds\",\"Exon\"]}]}");
+
+        Ok(())
     }
 }

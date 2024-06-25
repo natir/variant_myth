@@ -37,6 +37,10 @@ pub enum Error {
     /// Bad vcf record
     #[error("Bad vcf record")]
     VcfBadRecord,
+
+    /// Error in attribute name
+    #[error("Attribute name not support {0}")]
+    AttributeNameNotSupport(String),
 }
 
 /// Alias of result

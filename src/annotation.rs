@@ -9,7 +9,7 @@ use bstr::ByteSlice as _;
 use crate::error;
 
 /// Define annotation strand
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Strand {
     /// Annotation is in forward strand
     Forward,
@@ -27,7 +27,7 @@ impl std::fmt::Display for Strand {
 }
 
 /// Define annotation frame
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Frame {
     /// Annotation frame is Unknow
     Unknow,
@@ -51,19 +51,23 @@ impl std::fmt::Display for Frame {
 }
 
 /// Store attribute of gff record
-#[derive(Debug, Clone, std::default::Default)]
+#[derive(Debug, Clone, std::default::Default, PartialEq, Eq)]
 pub struct Attribute {
     gene_id: Vec<u8>,
     transcript_id: Vec<u8>,
     gene_name: Vec<u8>,
-    exon_number: Option<u64>,
-    exon_id: Option<Vec<u8>>,
+    exon_number: u64,
+    exon_id: Vec<u8>,
 }
 
 impl Attribute {
     /// Create an attribute from u8 slice
     pub fn from_u8_slice(slice: &[u8]) -> error::Result<Self> {
         let mut obj = Attribute::default();
+
+        if slice.is_empty() {
+            return Ok(obj);
+        }
 
         for attribute in slice.split_str(";") {
             match attribute {
@@ -78,24 +82,25 @@ impl Attribute {
                 }
                 [b'e', b'x', b'o', b'n', b'_', b'n', b'u', b'm', b'b', b'e', b'r', b'=', value @ ..] => {
                     obj.exon_number =
-                        Some(unsafe { String::from_utf8_unchecked(value.to_vec()).parse::<u64>()? })
+                        unsafe { String::from_utf8_unchecked(value.to_vec()).parse::<u64>()? }
                 }
                 [b'e', b'x', b'o', b'n', b'_', b'i', b'd', b'=', value @ ..] => {
-                    obj.exon_id = Some(value.to_vec())
+                    obj.exon_id = value.to_vec()
                 }
-                _ => panic!(
-                    "Not support attribute type {}",
-                    String::from_utf8(attribute.to_vec()).unwrap()
-                ),
+                _ => {
+                    return unsafe {
+                        Err(
+                            error::Error::AttributeNameNotSupport(String::from_utf8_unchecked(
+                                attribute.to_vec(),
+                            ))
+                            .into(),
+                        )
+                    }
+                }
             }
         }
 
         Ok(obj)
-    }
-
-    /// Get transcript_id
-    pub fn get_transcript_id(&self) -> &[u8] {
-        &self.transcript_id
     }
 
     /// Get gene name
@@ -103,39 +108,49 @@ impl Attribute {
         &self.gene_name
     }
 
+    /// Get transcript_id
+    pub fn get_transcript_id(&self) -> &[u8] {
+        &self.transcript_id
+    }
+
     /// Get exon_number
     pub fn get_exon_number(&self) -> u64 {
-        self.exon_number.unwrap_or(0)
+        self.exon_number
     }
 }
 
 impl std::fmt::Display for Attribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "gene_id={};transcript_id={}",
-            String::from_utf8(self.gene_id.to_vec()).unwrap(),
-            String::from_utf8(self.transcript_id.to_vec()).unwrap(),
-        )?;
-        if !self.gene_name.is_empty() {
+        unsafe {
             write!(
                 f,
-                ";gene_name={}",
-                String::from_utf8(self.gene_name.to_vec()).unwrap()
+                "gene_id={};transcript_id={}",
+                String::from_utf8_unchecked(self.gene_id.to_vec()),
+                String::from_utf8_unchecked(self.transcript_id.to_vec()),
             )?;
+            if !self.gene_name.is_empty() {
+                write!(
+                    f,
+                    ";gene_name={}",
+                    String::from_utf8_unchecked(self.gene_name.to_vec())
+                )?;
+            }
+            if self.exon_number != 0 {
+                write!(f, ";exon_number={}", self.exon_number)?;
+            }
+            if !self.exon_id.is_empty() {
+                write!(
+                    f,
+                    ";exon_id={}",
+                    String::from_utf8_unchecked(self.exon_id.to_vec())
+                )?;
+            }
         }
-        if let Some(en) = &self.exon_number {
-            write!(f, ";exon_number={}", en)?;
-        }
-        if let Some(ei) = &self.exon_id {
-            write!(f, ";exon_id={}", String::from_utf8(ei.to_vec()).unwrap())?;
-        }
-
         Ok(())
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// Store information of a Gff3 field
 pub struct Annotation {
     seqname: Vec<u8>,
@@ -152,39 +167,36 @@ pub struct Annotation {
 impl Annotation {
     /// Build a new annotations from a csv::ByteRecord
     pub fn from_byte_record(record: &csv::ByteRecord) -> error::Result<Self> {
-        Ok(Self {
-            seqname: record.get(0).unwrap().to_vec(),
-            source: record.get(1).unwrap().to_vec(),
-            feature: record.get(2).unwrap().to_vec(),
-            start: String::from_utf8(record.get(3).unwrap().to_vec())
-                .unwrap()
-                .parse::<u64>()
-                .unwrap(),
-            end: String::from_utf8(record.get(4).unwrap().to_vec())
-                .unwrap()
-                .parse::<u64>()
-                .unwrap(),
-            score: match record.get(5).unwrap() {
-                b"." => f64::NAN,
-                other => String::from_utf8(other.to_vec())
-                    .unwrap()
-                    .parse::<f64>()
+        unsafe {
+            Ok(Self {
+                seqname: record.get(0).unwrap().to_vec(),
+                source: record.get(1).unwrap().to_vec(),
+                feature: record.get(2).unwrap().to_vec(),
+                start: String::from_utf8_unchecked(record.get(3).unwrap().to_vec())
+                    .parse::<u64>()
                     .unwrap(),
-            },
-            strand: match record.get(6).unwrap() {
-                b"+" => Strand::Forward,
-                b"-" => Strand::Reverse,
-                _ => return Err(error::Error::GffBadStrand.into()),
-            },
-            frame: match record.get(7).unwrap() {
-                b"." => Frame::Unknow,
-                b"0" => Frame::Zero,
-                b"1" => Frame::One,
-                b"2" => Frame::Two,
-                _ => return Err(error::Error::GffBadFrame.into()),
-            },
-            attribute: Attribute::from_u8_slice(record.get(8).unwrap())?,
-        })
+                end: String::from_utf8_unchecked(record.get(4).unwrap().to_vec())
+                    .parse::<u64>()
+                    .unwrap(),
+                score: match record.get(5).unwrap() {
+                    b"." => f64::INFINITY,
+                    other => String::from_utf8_unchecked(other.to_vec()).parse::<f64>()?,
+                },
+                strand: match record.get(6).unwrap() {
+                    b"+" => Strand::Forward,
+                    b"-" => Strand::Reverse,
+                    _ => return Err(error::Error::GffBadStrand.into()),
+                },
+                frame: match record.get(7).unwrap() {
+                    b"." => Frame::Unknow,
+                    b"0" => Frame::Zero,
+                    b"1" => Frame::One,
+                    b"2" => Frame::Two,
+                    _ => return Err(error::Error::GffBadFrame.into()),
+                },
+                attribute: Attribute::from_u8_slice(record.get(8).unwrap())?,
+            })
+        }
     }
 
     /// Build annotation from another Annotation and set feature
@@ -204,6 +216,11 @@ impl Annotation {
         &self.seqname
     }
 
+    /// Get feature
+    pub fn get_feature(&self) -> &[u8] {
+        &self.feature
+    }
+
     /// Get seqname
     pub fn get_source(&self) -> &[u8] {
         &self.source
@@ -212,6 +229,11 @@ impl Annotation {
     /// Get strand
     pub fn get_strand(&self) -> &Strand {
         &self.strand
+    }
+
+    /// Get frame
+    pub fn get_frame(&self) -> &Frame {
+        &self.frame
     }
 
     /// Get attribute annotation
@@ -223,27 +245,158 @@ impl Annotation {
     pub fn get_transcript_id(&self) -> &[u8] {
         self.attribute.get_transcript_id()
     }
-
-    /// Get feature
-    pub fn get_feature(&self) -> &[u8] {
-        &self.feature
-    }
 }
 
 impl std::fmt::Display for Annotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "{} {} {} {} {} {} {} {} {}",
-            String::from_utf8(self.seqname.clone()).unwrap(),
-            String::from_utf8(self.source.clone()).unwrap(),
-            String::from_utf8(self.feature.clone()).unwrap(),
-            self.start,
-            self.end,
-            self.score,
-            self.strand,
-            self.frame,
-            self.attribute,
-        )
+        unsafe {
+            write!(
+                f,
+                "{} {} {} {} {} {} {} {} {}",
+                String::from_utf8_unchecked(self.seqname.clone()),
+                String::from_utf8_unchecked(self.source.clone()),
+                String::from_utf8_unchecked(self.feature.clone()),
+                self.start,
+                self.end,
+                self.score,
+                self.strand,
+                self.frame,
+                self.attribute,
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+
+    /* project use */
+    use super::*;
+
+    #[test]
+    fn format_strand() {
+        assert_eq!(format!("{}", Strand::Forward), "+");
+        assert_eq!(format!("{}", Strand::Reverse), "-");
+    }
+
+    #[test]
+    fn format_frame() {
+        assert_eq!(format!("{}", Frame::Unknow), ".");
+        assert_eq!(format!("{}", Frame::Zero), "0");
+        assert_eq!(format!("{}", Frame::One), "1");
+        assert_eq!(format!("{}", Frame::Two), "2");
+    }
+
+    #[test]
+    fn attribute() -> error::Result<()> {
+        let slice =
+            b"gene_id=test.1;transcript_id=test.1;exon_number=33;exon_id=test.1.33;gene_name=TEST";
+
+        let attribute = Attribute::from_u8_slice(slice)?;
+        assert_eq!(attribute.get_gene_name(), b"TEST");
+        assert_eq!(attribute.get_transcript_id(), b"test.1");
+        assert_eq!(attribute.get_exon_number(), 33);
+
+        assert_eq!(
+            format!("{}", attribute),
+            "gene_id=test.1;transcript_id=test.1;gene_name=TEST;exon_number=33;exon_id=test.1.33"
+        );
+
+        let slice = b"";
+        let attribute = Attribute::from_u8_slice(slice)?;
+        assert_eq!(attribute.get_gene_name(), b"");
+        assert_eq!(attribute.get_transcript_id(), b"");
+        assert_eq!(attribute.get_exon_number(), 0);
+
+        let _result: std::result::Result<(), error::Error> = Err(
+            error::Error::AttributeNameNotSupport(String::from_utf8(b"test".to_vec()).unwrap()),
+        );
+        assert!(matches!(Attribute::from_u8_slice(b"test"), _result));
+
+        Ok(())
+    }
+
+    #[test]
+    fn annotation() -> error::Result<()> {
+        let mut data = vec![
+            "chr1",
+            "knownGene",
+            "transcript",
+            "29554",
+            "31097",
+            ".",
+            "+",
+            ".",
+            "gene_id=ENST00000473358.1;transcript_id=ENST00000473358.1",
+        ];
+
+        // Basic test
+        let record = csv::ByteRecord::from(data.clone());
+        let annotation = Annotation::from_byte_record(&record)?;
+
+        assert_eq!(annotation.get_interval(), 29554..31097);
+        assert_eq!(annotation.get_seqname(), b"chr1");
+        assert_eq!(annotation.get_source(), b"knownGene");
+        assert_eq!(annotation.get_feature(), b"transcript");
+        assert_eq!(annotation.get_strand(), &Strand::Forward);
+        assert_eq!(annotation.get_frame(), &Frame::Unknow);
+        assert_eq!(annotation.get_transcript_id(), b"ENST00000473358.1");
+        assert_eq!(
+            annotation.get_attribute(),
+            &Attribute::from_u8_slice(record.get(8).unwrap())?
+        );
+
+        // Format
+        assert_eq!(format!("{}", annotation), "chr1 knownGene transcript 29554 31097 inf + . gene_id=ENST00000473358.1;transcript_id=ENST00000473358.1");
+
+        // Change exon
+        let annotation = Annotation::from_annotation(&annotation, b"exon");
+
+        assert_eq!(annotation.get_feature(), b"exon");
+
+        // All possible value for Strand
+        data[6] = "-";
+        let record = csv::ByteRecord::from(data.clone());
+        let annotation = Annotation::from_byte_record(&record)?;
+        assert_eq!(annotation.get_strand(), &Strand::Reverse);
+
+        // All possible value for Frame
+        data[7] = "0";
+        let record = csv::ByteRecord::from(data.clone());
+        let annotation = Annotation::from_byte_record(&record)?;
+        assert_eq!(annotation.get_frame(), &Frame::Zero);
+
+        data[7] = "1";
+        let record = csv::ByteRecord::from(data.clone());
+        let annotation = Annotation::from_byte_record(&record)?;
+        assert_eq!(annotation.get_frame(), &Frame::One);
+
+        data[7] = "2";
+        let record = csv::ByteRecord::from(data.clone());
+        let annotation = Annotation::from_byte_record(&record)?;
+        assert_eq!(annotation.get_frame(), &Frame::Two);
+
+        // Error
+        data[5] = "Not a Float";
+        let record = csv::ByteRecord::from(data.clone());
+        let _result = "Other not a Float".parse::<f64>();
+        assert!(matches!(Annotation::from_byte_record(&record), _result));
+        data[5] = "1.1";
+
+        data[6] = "Forward";
+        let record = csv::ByteRecord::from(data.clone());
+        let _result: std::result::Result<(), error::Error> = Err(error::Error::GffBadStrand);
+        assert!(matches!(Annotation::from_byte_record(&record), _result));
+        data[6] = "+";
+
+        data[7] = "3";
+        let record = csv::ByteRecord::from(data.clone());
+        let _result: std::result::Result<(), error::Error> = Err(error::Error::GffBadFrame);
+        assert!(matches!(Annotation::from_byte_record(&record), _result));
+
+        Ok(())
     }
 }
