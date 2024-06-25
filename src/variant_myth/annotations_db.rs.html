@@ -100,6 +100,63 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Annotations database
 
 </span><span class="comment">/* std use */
@@ -200,6 +257,63 @@
         }
 
         tree.insert(interval.clone(), annotation.clone())
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="comment">/* std use */
+
+    /* crate use */
+
+    </span><span class="kw">use </span><span class="kw">crate</span>::annotation::Annotation;
+
+    <span class="comment">/* project use */
+    </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="kw">const </span>DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"chr1\tknownGene\ttranscript\t11869\t14409\t.\t+\t.\tgene_id=gene1
+chr1\tknownGene\texon\t11869\t12227\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=1;exon_id=gene1.1
+chr1\tknownGene\texon\t12613\t12721\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=2;exon_id=gene1.2
+chr1\tknownGene\texon\t13221\t14409\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=3;exon_id=gene1.3
+chr1\tknownGene\ttranscript\t17369\t17436\t.\t-\t.\tgene_id=gene2;transcript_id=gene2
+chr1\tknownGene\texon\t17369\t17436\t.\t-\t.\tgene_id=gene2;transcript_id=gene2;exon_number=1;exon_id=gene2.1
+chr1\tknownGene\ttranscript\t29554\t31097\t.\t+\t.\tgene_id=gene3;transcript_id=gene3
+chr1\tknownGene\texon\t29554\t30039\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=1;exon_id=gene3.1
+chr1\tknownGene\texon\t30564\t30667\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=2;exon_id=gene3.2
+chr1\tknownGene\texon\t30976\t31097\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3
+chr2\ttest\ttranscript\t50\t200\t.\t-\t.\tgene_id=gene4"</span>;
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>annotations() -&gt; error::Result&lt;()&gt; {
+        <span class="kw">let </span>annotations =
+            AnnotationsDataBase::from_reader(std::io::BufReader::new(Box::new(DATA)), <span class="number">100</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>b1 = Annotation::from_byte_record(<span class="kw-2">&amp;</span>csv::ByteRecord::from(
+            String::from_utf8(DATA[..<span class="number">57</span>].to_vec())
+                .unwrap()
+                .split(<span class="string">"\t"</span>)
+                .map(|s| s.to_string())
+                .collect::&lt;Vec&lt;String&gt;&gt;(),
+        ))<span class="question-mark">?</span>;
+        <span class="macro">println!</span>(<span class="string">"{}"</span>, String::from_utf8(DATA[<span class="number">262</span>..<span class="number">363</span>].to_vec()).unwrap());
+        <span class="kw">let </span>b2 = Annotation::from_byte_record(<span class="kw-2">&amp;</span>csv::ByteRecord::from(
+            String::from_utf8(DATA[<span class="number">262</span>..<span class="number">363</span>].to_vec())
+                .unwrap()
+                .split(<span class="string">"\t"</span>)
+                .map(|s| s.to_string())
+                .collect::&lt;Vec&lt;String&gt;&gt;(),
+        ))<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>truth = <span class="macro">vec!</span>[<span class="kw-2">&amp;</span>b1, <span class="kw-2">&amp;</span>b2];
+        <span class="macro">assert_eq!</span>(annotations.get_annotation(<span class="string">b"chr1"</span>, <span class="number">14000</span>..<span class="number">14001</span>), truth);
+
+        <span class="comment">// seqname not present
+        </span><span class="macro">assert_eq!</span>(
+            annotations.get_annotation(<span class="string">b"chrX"</span>, <span class="number">14000</span>..<span class="number">14001</span>),
+            Vec::&lt;<span class="kw-2">&amp;</span>annotation::Annotation&gt;::new()
+        );
+
+        <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div></section></main></body></html>
