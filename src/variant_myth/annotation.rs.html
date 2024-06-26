@@ -395,7 +395,6 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Struct to store annotation
 
 </span><span class="comment">/* std use */
@@ -694,7 +693,6 @@
             <span class="string">b"gene_id=test.1;transcript_id=test.1;exon_number=33;exon_id=test.1.33;gene_name=TEST"</span>;
 
         <span class="kw">let </span>attribute = Attribute::from_u8_slice(slice)<span class="question-mark">?</span>;
-        <span class="macro">println!</span>(<span class="string">"{}"</span>, attribute);
         <span class="macro">assert_eq!</span>(attribute.get_gene_name(), <span class="string">b"TEST"</span>);
         <span class="macro">assert_eq!</span>(attribute.get_transcript_id(), <span class="string">b"test.1"</span>);
         <span class="macro">assert_eq!</span>(attribute.get_exon_number(), <span class="number">33</span>);

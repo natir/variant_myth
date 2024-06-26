@@ -269,7 +269,7 @@
 }
 
 <span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>tests {
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
     <span class="comment">/* std use */
 
     /* crate use */
@@ -278,7 +278,7 @@
     <span class="comment">/* project use */
     </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">const </span>STANDARD: <span class="kw-2">&amp;</span>[u8] =
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>STANDARD: <span class="kw-2">&amp;</span>[u8] =
         <span class="string">b"    AAs  = FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG
   Starts = ---M------**--*----M---------------M----------------------------
   Base1  = TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG

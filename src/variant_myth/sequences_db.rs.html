@@ -148,7 +148,6 @@
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Sequence database
 
 </span><span class="comment">/* std use */
@@ -266,7 +265,6 @@
             std::io::BufReader::new(Box::new(std::io::Cursor::new(temp_input.to_vec())));
 
         <span class="kw">let </span>sequences = SequencesDataBase::from_reader(input)<span class="question-mark">?</span>;
-        <span class="macro">println!</span>(<span class="string">"{}"</span>, String::from_utf8(temp_input).unwrap());
 
         <span class="macro">assert_eq!</span>(
             sequences.get_interval(<span class="string">b"RGKPRHQMHK"</span>, <span class="kw-2">&amp;</span>(<span class="number">50</span>..<span class="number">60</span>)).unwrap(),
