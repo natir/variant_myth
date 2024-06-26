@@ -451,8 +451,6 @@
 <a href="#451" id="451">451</a>
 <a href="#452" id="452">452</a>
 <a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A variant annotator.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -810,9 +808,7 @@
         <span class="comment">// produce sequence db
         </span><span class="kw">let </span>seq_db = sequences_db::SequencesDataBase::from_reader(reader)<span class="question-mark">?</span>;
         <span class="comment">// produce translate worker
-        </span><span class="kw">let </span>translate = translate::Translate::from_reader(std::io::BufReader::new(Box::new(
-            translate::tests::STANDARD,
-        )))<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>translate = translate::Translate::default();
 
         <span class="comment">// target variant
         </span><span class="kw">let </span>variant = variant::Variant {

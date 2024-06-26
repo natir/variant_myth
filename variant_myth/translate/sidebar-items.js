@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["nuc2bit","seq2bit"],"struct":["Translate"]};
+window.SIDEBAR_ITEMS = {"constant":["STANDARD"],"fn":["nuc2bit","seq2bit"],"struct":["Translate"]};

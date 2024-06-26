@@ -161,6 +161,14 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Struct to perform translate
 
 </span><span class="comment">/* std use */
@@ -196,6 +204,15 @@
     start: [bool; <span class="number">64</span>],
     end: [bool; <span class="number">64</span>],
 }
+
+<span class="doccomment">/// File content of standard translate table
+</span><span class="kw">pub const </span>STANDARD: <span class="kw-2">&amp;</span>[u8] =
+    <span class="string">b"    AAs  = FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG
+  Starts = ---M------**--*----M---------------M----------------------------
+  Base1  = TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG
+  Base2  = TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG
+  Base3  = TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG
+"</span>;
 
 <span class="kw">impl </span>Translate {
     <span class="doccomment">/// Build a Translate table from a reader
@@ -268,6 +285,13 @@
     }
 }
 
+<span class="kw">impl </span>std::default::Default <span class="kw">for </span>Translate {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="comment">// standard value so no error
+        </span>Translate::from_reader(std::io::BufReader::new(Box::new(STANDARD))).unwrap()
+    }
+}
+
 <span class="attr">#[cfg(test)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
     <span class="comment">/* std use */
@@ -278,17 +302,9 @@
     <span class="comment">/* project use */
     </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>STANDARD: <span class="kw-2">&amp;</span>[u8] =
-        <span class="string">b"    AAs  = FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG
-  Starts = ---M------**--*----M---------------M----------------------------
-  Base1  = TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG
-  Base2  = TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG
-  Base3  = TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG
-"</span>;
-
     <span class="attr">#[test]
     </span><span class="kw">fn </span>check_table() -&gt; error::Result&lt;()&gt; {
-        <span class="kw">let </span>trans = Translate::from_reader(std::io::BufReader::new(Box::new(STANDARD)))<span class="question-mark">?</span>;
+        <span class="kw">let </span>trans = Translate::default();
 
         <span class="macro">assert_eq!</span>(trans.get_aa(<span class="kw-2">&amp;</span>[<span class="string">b'T'</span>, <span class="string">b'T'</span>, <span class="string">b'T'</span>]), <span class="string">b'F'</span>);
         <span class="macro">assert_eq!</span>(trans.get_aa(<span class="kw-2">&amp;</span>[<span class="string">b'A'</span>, <span class="string">b'T'</span>, <span class="string">b'G'</span>]), <span class="string">b'M'</span>);
