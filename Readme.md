@@ -9,11 +9,11 @@
 
 A variant annotator.
 
-## Rational
+## Rationale
 
-Variant annotation take time, too many time, variant_myth try to solve this problem by use modern and parallel tools.
+Variant annotation take time, too much time. variant_myth try to solve this problem using modern and parallel tools.
 
-To detect if a variant match interval we use IntervalSet, information associate with interval are store in classic Swiss Table with AHash hash function.
+To detect if a variant match an interval we use IntervalSet, information associated with intervals are stored in classic Swiss Table with AHash hash function.
 
 ## Installation
 
