@@ -13,7 +13,7 @@ create-missing = false
 [output.html]
 smart-punctuation = true
 mathjax-support = true
-git-repository-url = "https://github.com/natir/variant-myth/"
+git-repository-url = "https://github.com/natir/variant_myth/"
 git-repository-icon = "fa-github"
-edit-url-template = "https://github.com/natir/variant-myth/edit/main/docs/{path}"
-site-url = "https://variant-myth.github.io/variant-myth"
+edit-url-template = "https://github.com/natir/variant_myth/edit/main/docs/{path}"
+site-url = "https://natir.github.io/variant_myth"

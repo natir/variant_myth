@@ -1,17 +1,5 @@
 # Install
 
-FOR LIB PACKAGE START
-
-Add this in your Cargo.toml
-```
-rev_comp = { version = "0.1" }
-```
-
-FOR LIB PACKAGE END
-
-
-FOR BIN PACKAGE START
-
 ### From source
 
 ```bash
@@ -20,4 +8,8 @@ cd rev_comp
 cargo install --path
 ```
 
-FOR BIN PACKAGE END
+### With cargo
+
+```bash
+cargo install --git https://github.com/natir/variant_myth.git
+```

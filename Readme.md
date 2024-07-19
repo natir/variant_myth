@@ -3,7 +3,7 @@
 ![Test](https://github.com/natir/variant_myth/workflows/Test/badge.svg)
 ![Lints](https://github.com/natir/variant_myth/workflows/Lints/badge.svg)
 ![MSRV](https://github.com/natir/variant_myth/workflows/MSRV/badge.svg)
-[![Documentation](https://github.com/natir/variant_myth/workflows/Documentation/badge.svg)](https://natir.github.io/variant_myth/variant_myth)
+[![Documentation](https://github.com/natir/variant_myth/workflows/Documentation/badge.svg)](https://natir.github.io/variant_myth/)
 [![CodeCov](https://codecov.io/gh/natir/variant_myth/branch/main/graph/badge.svg)](https://codecov.io/gh/natir/variant_myth)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/natir/variant_myth/blob/master/LICENSE)
 
