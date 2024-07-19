@@ -14,6 +14,7 @@ use rayon::prelude::*;
 pub mod annotation;
 pub mod annotations_db;
 pub mod cli;
+pub mod effect;
 pub mod error;
 pub mod myth;
 pub mod sequences_db;
@@ -110,7 +111,7 @@ pub fn variants2myth(
             myth::AnnotationMyth::builder()
                 .source(b"variant_myth".to_vec())
                 .transcript_id(vec![])
-                .effects(vec![myth::Effect::Intergenic])
+                .effects(vec![effect::Effect::IntergenicRegion])
                 .build()
                 .unwrap(), // No possible error in build
         )
@@ -121,7 +122,7 @@ pub fn variants2myth(
             myth::AnnotationMyth::builder()
                 .source(up_annot.get_source().to_vec())
                 .transcript_id(up_annot.get_transcript_id().to_vec())
-                .effects(vec![myth::Effect::Upstream])
+                .effects(vec![effect::Effect::UpstreamGeneVariant])
                 .build()
                 .unwrap(), // No possible error in build
         )
@@ -135,7 +136,7 @@ pub fn variants2myth(
             myth::AnnotationMyth::builder()
                 .source(down_annot.get_source().to_vec())
                 .transcript_id(down_annot.get_transcript_id().to_vec())
-                .effects(vec![myth::Effect::Downstream])
+                .effects(vec![effect::Effect::DownstreamGeneVariant])
                 .build()
                 .unwrap(), // No possible error in build
         )
@@ -149,7 +150,7 @@ pub fn variants2myth(
             .source(transcript.get_source().to_vec())
             .transcript_id(transcript.get_transcript_id().to_vec())
             .gene_name(transcript.get_attribute().get_gene_name().to_vec())
-            .effects(vec![myth::Effect::Transcript]);
+            .effects(vec![]);
 
         let transcript_annot = annotations
             .get_annotation(transcript.get_seqname(), transcript.get_interval())
@@ -160,10 +161,6 @@ pub fn variants2myth(
             })
             .cloned()
             .collect::<Vec<&annotation::Annotation>>();
-
-        if transcript_annot.iter().any(|a| a.get_feature() == b"CDS") {
-            transcript_myth.add_effect(myth::Effect::Cds)
-        }
 
         let utr5_annot = transcript_annot
             .iter()
@@ -185,7 +182,7 @@ pub fn variants2myth(
 
         // 5' UTR
         if !utr5_annot.is_empty() {
-            transcript_myth.add_effect(myth::Effect::Utr5Prime)
+            transcript_myth.add_effect(effect::Effect::P5PrimeUtrVariant)
         }
 
         // Get exon sequence
@@ -197,7 +194,7 @@ pub fn variants2myth(
 
         // 3' UTR
         if !utr3_annot.is_empty() {
-            transcript_myth.add_effect(myth::Effect::Utr3Prime)
+            transcript_myth.add_effect(effect::Effect::P3PrimeUtrVariant)
         }
 
         myth.add_annotation(transcript_myth.build().unwrap()); // Build error could never append
@@ -212,7 +209,7 @@ fn exon_effect(
     sequences: &sequences_db::SequencesDataBase,
     exon_annot: &[&annotation::Annotation],
     variant: &variant::Variant,
-) -> Vec<myth::Effect> {
+) -> Vec<effect::Effect> {
     let mut effects = vec![];
 
     let mut pos_exons = exon_annot
@@ -256,23 +253,23 @@ fn exon_effect(
         && (exons[exon_target].0.start..exons[exon_target].0.start + 2)
             .any(|x| variant_range.contains(&x))
     {
-        effects.push(myth::Effect::SpliceSiteAcceptor)
+        effects.push(effect::Effect::SpliceAcceptorVariant)
     }
     if (exons[exon_target].0.end - 2..exons[exon_target].0.end).any(|x| variant_range.contains(&x))
     {
-        effects.push(myth::Effect::SpliceSiteDonor)
+        effects.push(effect::Effect::SpliceDonorVariant)
     }
 
     // Variant only change
     let len_diff = variant.ref_seq.len().abs_diff(variant.alt_seq.len());
     if len_diff == 0 {
-        effects.push(myth::Effect::CodonChange)
+        // TODO fix this
     } else if len_diff % 3 != 0 {
-        effects.push(myth::Effect::FrameShift)
+        effects.push(effect::Effect::FrameshiftVariant)
     } else if variant.ref_seq.len() < variant.alt_seq.len() {
-        effects.push(myth::Effect::CodonInsertion)
+        effects.push(effect::Effect::ConservativeInframeInsertion)
     } else {
-        effects.push(myth::Effect::CodonDeletion)
+        effects.push(effect::Effect::ConservativeInframeDeletion)
     }
 
     // Get sequence
@@ -368,7 +365,7 @@ mod tests {
 
         let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
 
-        assert_eq!(effects, vec![myth::Effect::CodonChange]);
+        assert_eq!(effects, vec![]);
 
         let variant = variant::Variant {
             seqname: fasta_reader[1..11].to_vec(),
@@ -379,10 +376,7 @@ mod tests {
 
         let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
 
-        assert_eq!(
-            effects,
-            vec![myth::Effect::SpliceSiteAcceptor, myth::Effect::CodonChange]
-        );
+        assert_eq!(effects, vec![effect::Effect::SpliceAcceptorVariant,]);
 
         let variant = variant::Variant {
             seqname: fasta_reader[1..11].to_vec(),
@@ -393,10 +387,7 @@ mod tests {
 
         let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
 
-        assert_eq!(
-            effects,
-            vec![myth::Effect::SpliceSiteDonor, myth::Effect::CodonChange]
-        );
+        assert_eq!(effects, vec![effect::Effect::SpliceDonorVariant]);
 
         let variant = variant::Variant {
             seqname: fasta_reader[1..11].to_vec(),
@@ -407,7 +398,7 @@ mod tests {
 
         let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
 
-        assert_eq!(effects, vec![myth::Effect::FrameShift]);
+        assert_eq!(effects, vec![effect::Effect::FrameshiftVariant]);
 
         let variant = variant::Variant {
             seqname: fasta_reader[1..11].to_vec(),
@@ -418,7 +409,7 @@ mod tests {
 
         let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
 
-        assert_eq!(effects, vec![myth::Effect::CodonInsertion]);
+        assert_eq!(effects, vec![effect::Effect::ConservativeInframeInsertion]);
 
         let variant = variant::Variant {
             seqname: fasta_reader[1..11].to_vec(),
@@ -429,7 +420,7 @@ mod tests {
 
         let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
 
-        assert_eq!(effects, vec![myth::Effect::CodonDeletion]);
+        assert_eq!(effects, vec![effect::Effect::ConservativeInframeDeletion]);
 
         let variant = variant::Variant {
             seqname: fasta_reader[1..11].to_vec(),
