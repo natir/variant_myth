@@ -7,7 +7,7 @@
 /* project use */
 
 /// Impact of variant
-#[derive(Debug, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Impact {
     /// Variant have an High Impact
     High = 4,
@@ -17,8 +17,80 @@ pub enum Impact {
     Low = 2,
     /// Variant have an Modifier Impact
     Modifier = 1,
+    #[default]
     /// Variant have an Undeterminate Impact
     Other = 0,
+}
+
+impl From<&Effect> for Impact {
+    fn from(value: &Effect) -> Impact {
+        match value {
+            // High Impact
+		Effect::BidirectionalGeneFusion
+		| Effect::ChromosomeNumberVariation
+		| Effect::ExonLossVariant
+		| Effect::FeatureAblation
+		| Effect::FrameshiftVariant
+		| Effect::GeneFusion
+		| Effect::ProteinProteinContact
+		| Effect::RareAminoAcidVariant
+		| Effect::RearrangedAtDnaLevel
+		| Effect::SpliceAcceptorVariant
+		| Effect::SpliceDonorVariant
+		| Effect::StartLost
+		| Effect::StopGained
+		| Effect::StopLost
+		| Effect::StructuralInteractionVariant
+		| Effect::TranscriptAblation
+		=> Impact::High,
+            // Moderate Impact
+		Effect::ConservativeInframeDeletion
+		| Effect::ConservativeInframeInsertion
+		| Effect::DisruptiveInframeDeletion
+		| Effect::MissenseVariant
+		| Effect::P3PrimeUtrTruncation
+		| Effect::P5PrimeUtrTruncation
+            | Effect::DisruptiveInframeInsertion
+		=> Impact::Moderate,
+            // Low Impact
+		Effect::InitiatorCodonVariant
+		| Effect::P5PrimeUtrPrematureStartCodonGainVariant
+		| Effect::SpliceRegionVariant
+		| Effect::SynonymousVariant
+		| Effect::TfBindingSiteVariant
+		| Effect::TfbsAblation
+		| Effect::FeatureFusion
+		=> Impact::Low,
+            // Modifier Impact
+		Effect::Chromosome
+		| Effect::CodingSequenceVariant
+		| Effect::ConservedIntergenicVariant
+		| Effect::ConservedIntronVariant
+		| Effect::DownstreamGeneVariant
+		| Effect::ExonRegion
+		| Effect::FeatureElongation
+		| Effect::GeneVariant
+		| Effect::IntergenicRegion
+		| Effect::IntragenicVariant
+		| Effect::IntronVariant
+		| Effect::NonCodingTranscriptExonVariant
+		| Effect::NonCodingTranscriptVariant
+		| Effect::P3PrimeUtrVariant
+		| Effect::P5PrimeUtrVariant
+		| Effect::RegulatoryRegionVariant
+		| Effect::SequenceFeature
+		| Effect::UpstreamGeneVariant
+		=> Impact::Modifier,
+            // Other Impact
+		Effect::Inversion // Large, Exon -> High | Gene, Transcript -> Moderate
+		| Effect::MiRna //
+		| Effect::StartRetainedVariant // FRAME_SHIFT_BEFORE_CDS_START -> Modifier | SYNONYMOUS_START -> Low
+		| Effect::StopRetainedVariant // FrameShiftAfterCDS -> Modifer | NonSynonymousStop -> Low | SynonymousStop -> Low
+		| Effect::Duplication // Large, Exon -> High | Gene, Transcript -> Moderate
+		=> Impact::Other,
+
+        }
+    }
 }
 
 /// Effect of variant

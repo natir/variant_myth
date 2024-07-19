@@ -26,7 +26,11 @@ pub struct AnnotationMyth {
     pub gene_name: Vec<u8>,
 
     /// Store effect of this variants
-    pub effects: Vec<effect::Effect>,
+    effects: Vec<effect::Effect>,
+
+    #[builder(private, default)]
+    /// Store impact of effect
+    impact: effect::Impact,
 }
 
 impl AnnotationMyth {
@@ -40,18 +44,25 @@ impl AnnotationMythBuilder {
     /// Add Effect in AnnotationMyth
     pub fn add_effect(&mut self, e: effect::Effect) {
         if let Some(effects) = &mut self.effects {
-            effects.push(e)
+            self.impact = Some(core::cmp::max(
+                effect::Impact::from(&e),
+                self.impact.clone().unwrap_or(effect::Impact::Other),
+            ));
+            effects.push(e);
         } else {
-            self.effects = Some(vec![e])
+            self.impact = Some(effect::Impact::from(&e));
+            self.effects = Some(vec![e]);
         }
     }
 
     /// Extend Effect in AnnotationMyth
     pub fn extend_effect(&mut self, e: &[effect::Effect]) {
         if let Some(effects) = &mut self.effects {
-            effects.extend_from_slice(e)
+            effects.extend_from_slice(e);
+            self.impact = effects.iter().map(effect::Impact::from).max();
         } else {
-            self.effects = Some(e.to_vec())
+            self.effects = Some(e.to_vec());
+            self.impact = e.iter().map(effect::Impact::from).max();
         }
     }
 }
@@ -115,6 +126,7 @@ mod tests {
                 transcript_id: b"gene1".to_vec(),
                 gene_name: b"".to_vec(),
                 effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion],
+                impact: effect::Impact::Modifier,
             }
         );
 
@@ -131,6 +143,7 @@ mod tests {
                 transcript_id: b"gene1".to_vec(),
                 gene_name: b"".to_vec(),
                 effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion],
+                impact: effect::Impact::Modifier,
             }
         )
     }
@@ -166,7 +179,8 @@ mod tests {
                     source: b"test".to_vec(),
                     transcript_id: b"gene1".to_vec(),
                     gene_name: b"".to_vec(),
-                    effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion]
+                    effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion],
+                    impact: effect::Impact::Modifier
                 }]
             }
         );
@@ -192,7 +206,7 @@ mod tests {
 
         let mut json = vec![];
         serde_json::to_writer(&mut json, &myth)?;
-        assert_eq!(json, b"{\"variant\":{\"seqname\":\"93\",\"position\":2036067340,\"ref_seq\":\"T\",\"alt_seq\":\".\"},\"annotations\":[{\"source\":\"test\",\"transcript_id\":\"gene1\",\"gene_name\":\"\",\"effects\":[\"GeneVariant\",\"ExonRegion\"]}]}");
+        assert_eq!(json, b"{\"variant\":{\"seqname\":\"93\",\"position\":2036067340,\"ref_seq\":\"T\",\"alt_seq\":\".\"},\"annotations\":[{\"source\":\"test\",\"transcript_id\":\"gene1\",\"gene_name\":\"\",\"effects\":[\"GeneVariant\",\"ExonRegion\"],\"impact\":\"Modifier\"}]}");
 
         Ok(())
     }
