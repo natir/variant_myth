@@ -1,21 +1,25 @@
 [package]
-name = "variant_myth"
+name    = "variant_myth"
 version = "0.1.0"
-authors = ["Pierre Marijon <pierre@marijon.fr>"]
-edition = "2021"
-description = "A variant annotator."
+authors = [
+	"Pierre Marijon <pierre@marijon.fr>"
+]
+
+description  = "A variant annotater."
+edition      = "2021"
 rust-version = "1.74"
 
-homepage = "https://github.com/natir/variant_myth"
-repository = "https://github.com/natir/variant_myth"
-documentation = "https://natir.github.io/variant_myth/variant_myth"
+homepage      = "https://natir.github.io/variant-myth"
+repository    = "https://github.com/natir/variant-myth"
+documentation = "https://natir.github.io/variant-myth"
 
-readme = "Readme.md"
+readme       = "Readme.md"
 license-file = "LICENSE"
 
 
-[features]
-parallel = ["dep:rayon"]
+[[bin]]
+name = "variant_myth"
+path = "src/main.rs"
 
 
 [dependencies]
@@ -51,23 +55,27 @@ stderrlog      = { version = "0.5" }
 
 [dev-dependencies]
 criterion      = { version = "0.5" }
+
+## Functional test
 biotest        = { version = "0.2", features = ["sequence", "vcf", "fasta"] }
 assert_cmd     = { version = "2" }
 tempfile       = { version = "3" }
 
 
+[features]
+default = []
+parallel = ["dep:rayon"]
+bench = []
+
+
 [profile.release]
-lto = 'thin'
-opt-level = 3
+lto             = 'thin'
+opt-level       = 3
 overflow-checks = false
-panic = 'abort'
-incremental = false
+panic           = 'abort'
+incremental     = false
 
 
 [profile.profiling]
 inherits = "release"
-debug = true
-
-
-[package.metadata.cargo-all-features]
-skip_optional_dependencies = true
+debug    = true

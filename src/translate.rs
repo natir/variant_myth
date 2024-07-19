@@ -135,19 +135,19 @@ pub(crate) mod tests {
     fn check_table() -> error::Result<()> {
         let trans = Translate::default();
 
-        assert_eq!(trans.get_aa(&[b'T', b'T', b'T']), b'F');
-        assert_eq!(trans.get_aa(&[b'A', b'T', b'G']), b'M');
-        assert_eq!(trans.get_aa(&[b'G', b'G', b'G']), b'G');
+        assert_eq!(trans.get_aa(b"TTT"), b'F');
+        assert_eq!(trans.get_aa(b"ATG"), b'M');
+        assert_eq!(trans.get_aa(b"GGG"), b'G');
 
-        assert!(trans.is_start(&[b'T', b'T', b'G']));
-        assert!(trans.is_start(&[b'C', b'T', b'G']));
-        assert!(trans.is_start(&[b'A', b'T', b'G']));
-        assert!(!trans.is_start(&[b'A', b'T', b'C']));
+        assert!(trans.is_start(b"TTG"));
+        assert!(trans.is_start(b"CTG"));
+        assert!(trans.is_start(b"ATG"));
+        assert!(!trans.is_start(b"ATC"));
 
-        assert!(trans.is_stop(&[b'T', b'A', b'A']));
-        assert!(trans.is_stop(&[b'T', b'A', b'G']));
-        assert!(trans.is_stop(&[b'T', b'G', b'A']));
-        assert!(!trans.is_stop(&[b'A', b'T', b'C']));
+        assert!(trans.is_stop(b"TAA"));
+        assert!(trans.is_stop(b"TAG"));
+        assert!(trans.is_stop(b"TGA"));
+        assert!(!trans.is_stop(b"ATC"));
 
         Ok(())
     }

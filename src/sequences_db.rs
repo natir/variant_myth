@@ -119,7 +119,7 @@ mod tests {
         assert_eq!(
             sequences.get_transcript(
                 b"ELUFGTSRIU",
-                &vec![
+                &[
                     (1..5u64, annotation::Strand::Forward),
                     (20..25u64, annotation::Strand::Reverse),
                     (32..35u64, annotation::Strand::Forward)
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(
             sequences.get_transcript(
                 b"chr1",
-                &vec![
+                &[
                     (1..5u64, annotation::Strand::Forward),
                     (20..25u64, annotation::Strand::Reverse),
                     (32..35u64, annotation::Strand::Forward)
