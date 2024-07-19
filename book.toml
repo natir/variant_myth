@@ -1,0 +1,19 @@
+[book]
+title        = "variant_myth"
+authors      = ["Pierre Marijon"]
+description  = "A variant annotater."
+language     = "en"
+multilingual = false
+src          = "docs"
+
+[build]
+build-dir      = "website"
+create-missing = false
+
+[output.html]
+smart-punctuation = true
+mathjax-support = true
+git-repository-url = "https://github.com/natir/variant-myth/"
+git-repository-icon = "fa-github"
+edit-url-template = "https://github.com/natir/variant-myth/edit/main/docs/{path}"
+site-url = "https://variant-myth.github.io/variant-myth"
