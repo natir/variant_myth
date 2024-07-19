@@ -15,7 +15,6 @@ pub mod annotation;
 pub mod annotations_db;
 pub mod cli;
 pub mod error;
-pub mod interval_tree;
 pub mod myth;
 pub mod sequences_db;
 pub mod translate;
@@ -224,7 +223,7 @@ fn exon_effect(
                 (a.get_interval(), *a.get_strand()),
             )
         })
-        .collect::<Vec<(u64, (interval_tree::Interval<u64>, annotation::Strand))>>();
+        .collect::<Vec<(u64, (core::ops::Range<u64>, annotation::Strand))>>();
 
     #[cfg(feature = "parallel")]
     pos_exons.par_sort_unstable_by_key(|a| a.0);
@@ -234,7 +233,7 @@ fn exon_effect(
     let exons = pos_exons
         .iter()
         .map(|a| a.1.clone())
-        .collect::<Vec<(interval_tree::Interval<u64>, annotation::Strand)>>();
+        .collect::<Vec<(core::ops::Range<u64>, annotation::Strand)>>();
 
     // Edit sequence with variant
     let original_seq = sequences.get_transcript(exon_annot[0].get_seqname(), &exons);
@@ -253,11 +252,6 @@ fn exon_effect(
     let variant_range = variant.position
         ..(variant.position + variant.ref_seq.len().max(variant.alt_seq.len()) as u64);
 
-    println!("{:?}", variant);
-    println!("{:?}", variant_range);
-    println!("{:?}", exon_target);
-    println!("{:?}", exons);
-    println!("{:?}", exons[exon_target]);
     if exon_target != 0
         && (exons[exon_target].0.start..exons[exon_target].0.start + 2)
             .any(|x| variant_range.contains(&x))
@@ -284,7 +278,7 @@ fn exon_effect(
     // Get sequence
     let transcript_pos = exons[..exon_target]
         .iter()
-        .map(|e: &(interval_tree::Interval<u64>, annotation::Strand)| e.0.end - e.0.start)
+        .map(|e: &(core::ops::Range<u64>, annotation::Strand)| e.0.end - e.0.start)
         .sum::<u64>()
         + variant.position
         - exons[exon_target].0.start;

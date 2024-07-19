@@ -3,15 +3,15 @@
 /* std use */
 
 /* crate use */
+use rust_lapper;
 
 /* project use */
 use crate::annotation;
 use crate::error;
-use crate::interval_tree;
 
 /// Store annotations information associate to intervals
 pub struct AnnotationsDataBase {
-    intervals: ahash::AHashMap<Vec<u8>, interval_tree::IntervalTree<u64, annotation::Annotation>>,
+    intervals: ahash::AHashMap<Vec<u8>, rust_lapper::Lapper<u64, annotation::Annotation>>,
 }
 
 impl AnnotationsDataBase {
@@ -20,9 +20,9 @@ impl AnnotationsDataBase {
         input: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>,
         updown_distance: u64,
     ) -> error::Result<Self> {
-        let mut intervals: ahash::AHashMap<
+        let mut intervals_builder: ahash::AHashMap<
             Vec<u8>,
-            interval_tree::IntervalTree<u64, annotation::Annotation>,
+            Vec<rust_lapper::Interval<u64, annotation::Annotation>>,
         > = ahash::AHashMap::new();
 
         let mut reader = csv::ReaderBuilder::new()
@@ -35,10 +35,10 @@ impl AnnotationsDataBase {
             let seqname = annotation.get_seqname();
             let interval = annotation.get_interval();
 
-            intervals
+            intervals_builder
                 .entry(seqname.to_vec())
                 .and_modify(
-                    |tree: &mut interval_tree::IntervalTree<u64, annotation::Annotation>| {
+                    |tree: &mut Vec<rust_lapper::Interval<u64, annotation::Annotation>>| {
                         Self::add_annotion(
                             tree,
                             interval.clone(),
@@ -48,14 +48,20 @@ impl AnnotationsDataBase {
                     },
                 )
                 .or_insert({
-                    let mut tree = interval_tree::IntervalTree::new();
+                    let mut tree = Vec::new();
 
                     Self::add_annotion(&mut tree, interval, annotation, updown_distance);
                     tree
                 });
         }
 
-        intervals.values_mut().for_each(|i| i.index());
+        let mut intervals: ahash::AHashMap<
+            Vec<u8>,
+            rust_lapper::Lapper<u64, annotation::Annotation>,
+        > = ahash::AHashMap::with_capacity(intervals_builder.len());
+        for (key, values) in intervals_builder.drain() {
+            intervals.insert(key, rust_lapper::Lapper::new(values));
+        }
 
         Ok(Self { intervals })
     }
@@ -64,10 +70,12 @@ impl AnnotationsDataBase {
     pub fn get_annotation(
         &self,
         seqname: &[u8],
-        interval: interval_tree::Interval<u64>,
+        interval: core::ops::Range<u64>,
     ) -> Vec<&annotation::Annotation> {
         if let Some(chr) = self.intervals.get(seqname) {
-            chr.find(interval).into_iter().map(|e| e.data()).collect()
+            chr.find(interval.start, interval.end)
+                .map(|e| &e.val)
+                .collect()
         } else {
             vec![]
         }
@@ -75,8 +83,8 @@ impl AnnotationsDataBase {
 
     /// Add annotation
     fn add_annotion(
-        tree: &mut interval_tree::IntervalTree<u64, annotation::Annotation>,
-        interval: interval_tree::Interval<u64>,
+        tree: &mut Vec<rust_lapper::Interval<u64, annotation::Annotation>>,
+        interval: core::ops::Range<u64>,
         annotation: annotation::Annotation,
         updown_distance: u64,
     ) {
@@ -87,17 +95,23 @@ impl AnnotationsDataBase {
                 interval.start - updown_distance
             };
 
-            tree.insert(
-                upstream..interval.start,
-                annotation::Annotation::from_annotation(&annotation, b"upstream"),
-            );
-            tree.insert(
-                interval.end..interval.end + updown_distance,
-                annotation::Annotation::from_annotation(&annotation, b"downstream"),
-            );
+            tree.push(rust_lapper::Interval {
+                start: upstream,
+                stop: interval.start,
+                val: annotation::Annotation::from_annotation(&annotation, b"upstream"),
+            });
+            tree.push(rust_lapper::Interval {
+                start: interval.end,
+                stop: interval.end + updown_distance,
+                val: annotation::Annotation::from_annotation(&annotation, b"downstream"),
+            });
         }
 
-        tree.insert(interval.clone(), annotation.clone())
+        tree.push(rust_lapper::Interval {
+            start: interval.start,
+            stop: interval.end,
+            val: annotation,
+        })
     }
 }
 
@@ -132,7 +146,7 @@ chr2\ttest\ttranscript\t50\t200\t.\t-\t.\tgene_id=gene4";
         let b1 = Annotation::from_byte_record(&csv::ByteRecord::from(
             String::from_utf8(DATA[..57].to_vec())
                 .unwrap()
-                .split("\t")
+                .split('\t')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>(),
         ))?;
@@ -140,7 +154,7 @@ chr2\ttest\ttranscript\t50\t200\t.\t-\t.\tgene_id=gene4";
         let b2 = Annotation::from_byte_record(&csv::ByteRecord::from(
             String::from_utf8(DATA[262..363].to_vec())
                 .unwrap()
-                .split("\t")
+                .split('\t')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>(),
         ))?;

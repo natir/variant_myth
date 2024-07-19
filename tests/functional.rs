@@ -4,14 +4,13 @@ use std::io::Write;
 /* crate use */
 
 use biotest::Format as _;
-use bstr::ByteSlice as _;
 
 /* project use */
 
 #[cfg(not(feature = "parallel"))]
 const HELP: &[u8] = b"A variant annotater
 
-Usage: variant_myth{exe} [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --translate <TRANSLATE_PATH> --output <OUTPUT_PATH>
+Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --translate <TRANSLATE_PATH> --output <OUTPUT_PATH>
 
 Options:
   -i, --input <VARIANT_PATH>               Variant path
@@ -30,7 +29,7 @@ Options:
 #[cfg(feature = "parallel")]
 const HELP: &[u8] = b"A variant annotater
 
-Usage: variant_myth{exe} [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --translate <TRANSLATE_PATH> --output <OUTPUT_PATH>
+Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --translate <TRANSLATE_PATH> --output <OUTPUT_PATH>
 
 Options:
   -i, --input <VARIANT_PATH>
@@ -66,11 +65,7 @@ fn help_message() -> anyhow::Result<()> {
 
     let assert = cmd.assert();
 
-    if cfg!(target_os = "windows") {
-        assert.success().stdout(HELP.replace("{exe}", ".exe"));
-    } else {
-        assert.success().stdout(HELP.replace("{exe}", ""));
-    }
+    assert.success().stdout(HELP);
 
     Ok(())
 }

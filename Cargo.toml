@@ -22,6 +22,7 @@ parallel = ["dep:rayon"]
 # Specific
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
+rust-lapper    = { version = "1" }
 
 # Other
 derive_builder   = { version = "0.20" }
@@ -33,7 +34,7 @@ rayon          = { version = "1", optional = true }
 csv            = { version = "1" }
 niffler        = { version = "2", features = ["bzip2", "lzma", "gz", "bgz"] }
 serde          = { version = "1", features = ["derive"] }
-noodles        = { version = "0.77", features = ["fasta"] }
+noodles        = { version = "0.78", features = ["fasta"] }
 serde_json     = { version = "1" }
 
 # CLI management
@@ -54,14 +55,6 @@ biotest        = { version = "0.2", features = ["sequence", "vcf", "fasta"] }
 assert_cmd     = { version = "2" }
 tempfile       = { version = "3" }
 
-[[bench]]
-name = "interval_build"
-harness = false
-
-[[bench]]
-name = "interval_access"
-harness = false
-
 
 [profile.release]
 lto = 'thin'
@@ -74,6 +67,7 @@ incremental = false
 [profile.profiling]
 inherits = "release"
 debug = true
+
 
 [package.metadata.cargo-all-features]
 skip_optional_dependencies = true

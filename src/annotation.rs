@@ -150,7 +150,23 @@ impl std::fmt::Display for Attribute {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Wrapper around f64 to store annotation Score
+#[derive(Debug, Clone)]
+pub struct Score(pub f64);
+
+impl PartialEq for Score {
+    fn eq(&self, other: &Self) -> bool {
+        if self.0.is_infinite() && other.0.is_infinite() {
+            true
+        } else {
+            (self.0 - other.0).abs() < f64::EPSILON
+        }
+    }
+}
+
+impl Eq for Score {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Store information of a Gff3 field
 pub struct Annotation {
     seqname: Vec<u8>,
@@ -158,7 +174,7 @@ pub struct Annotation {
     feature: Vec<u8>,
     start: u64,
     end: u64,
-    score: f64,
+    score: Score,
     strand: Strand,
     frame: Frame,
     attribute: Attribute,
@@ -179,8 +195,8 @@ impl Annotation {
                     .parse::<u64>()
                     .unwrap(),
                 score: match record.get(5).unwrap() {
-                    b"." => f64::INFINITY,
-                    other => String::from_utf8_unchecked(other.to_vec()).parse::<f64>()?,
+                    b"." => Score(f64::INFINITY),
+                    other => Score(String::from_utf8_unchecked(other.to_vec()).parse::<f64>()?),
                 },
                 strand: match record.get(6).unwrap() {
                     b"+" => Strand::Forward,
@@ -258,7 +274,7 @@ impl std::fmt::Display for Annotation {
                 String::from_utf8_unchecked(self.feature.clone()),
                 self.start,
                 self.end,
-                self.score,
+                self.score.0,
                 self.strand,
                 self.frame,
                 self.attribute,

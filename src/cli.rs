@@ -13,6 +13,7 @@ use crate::error;
 #[derive(clap::Parser, std::fmt::Debug)]
 #[clap(
     name = "variant_myth",
+    bin_name = "variant_myth",
     version = "0.1",
     author = "Pierre Marijon <pierre@marijon.fr>"
 )]

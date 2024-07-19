@@ -7,7 +7,6 @@
 /* project use */
 use crate::annotation;
 use crate::error;
-use crate::interval_tree;
 
 /// Perform reverse complement
 pub fn rev_comp(seq: &mut [u8]) {
@@ -47,11 +46,7 @@ impl SequencesDataBase {
     }
 
     /// Get interval
-    pub fn get_interval(
-        &self,
-        seqname: &[u8],
-        interval: &interval_tree::Interval<u64>,
-    ) -> Option<&[u8]> {
+    pub fn get_interval(&self, seqname: &[u8], interval: &core::ops::Range<u64>) -> Option<&[u8]> {
         self.0
             .get(seqname)
             .map(|seq| &seq[interval.start as usize..interval.end as usize])
@@ -61,7 +56,7 @@ impl SequencesDataBase {
     pub fn get_transcript(
         &self,
         seqname: &[u8],
-        intervals: &[(interval_tree::Interval<u64>, annotation::Strand)],
+        intervals: &[(core::ops::Range<u64>, annotation::Strand)],
     ) -> Vec<u8> {
         let mut transcript = Vec::with_capacity(
             intervals
