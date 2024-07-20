@@ -6,7 +6,6 @@
 
 - [Install](install.md)
 - [Usage](usage.md)
-- [Example](example.md)
 
 # Contributor Guide
 

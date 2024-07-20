@@ -173,7 +173,7 @@ pub struct Annotation {
     source: Vec<u8>,
     feature: Vec<u8>,
     start: u64,
-    end: u64,
+    stop: u64,
     score: Score,
     strand: Strand,
     frame: Frame,
@@ -191,7 +191,7 @@ impl Annotation {
                 start: String::from_utf8_unchecked(record.get(3).unwrap().to_vec())
                     .parse::<u64>()
                     .unwrap(),
-                end: String::from_utf8_unchecked(record.get(4).unwrap().to_vec())
+                stop: String::from_utf8_unchecked(record.get(4).unwrap().to_vec())
                     .parse::<u64>()
                     .unwrap(),
                 score: match record.get(5).unwrap() {
@@ -222,9 +222,19 @@ impl Annotation {
         obj
     }
 
+    /// Get start
+    pub fn get_start(&self) -> u64 {
+        self.start
+    }
+
+    /// Get stop
+    pub fn get_stop(&self) -> u64 {
+        self.stop
+    }
+
     /// Create interval associate with annotation
     pub fn get_interval(&self) -> core::ops::Range<u64> {
-        self.start..self.end
+        self.start..self.stop
     }
 
     /// Get seqname
@@ -273,7 +283,7 @@ impl std::fmt::Display for Annotation {
                 String::from_utf8_unchecked(self.source.clone()),
                 String::from_utf8_unchecked(self.feature.clone()),
                 self.start,
-                self.end,
+                self.stop,
                 self.score.0,
                 self.strand,
                 self.frame,

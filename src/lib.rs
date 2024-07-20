@@ -168,11 +168,21 @@ pub fn variants2myth(
             .cloned()
             .collect::<Vec<&annotation::Annotation>>();
 
+        let start_position = transcript_annot
+            .iter()
+            .find(|&&x| x.get_feature() == b"start_codon")
+            .map(|x| x.get_start());
+
         let exon_annot = transcript_annot
             .iter()
             .filter(|a| a.get_feature() == b"exon")
             .cloned()
             .collect::<Vec<&annotation::Annotation>>();
+
+        let stop_position = transcript_annot
+            .iter()
+            .find(|&&x| x.get_feature() == b"start_codon")
+            .map(|x| x.get_stop());
 
         let utr3_annot = transcript_annot
             .iter()
@@ -185,10 +195,18 @@ pub fn variants2myth(
             transcript_myth.add_effect(effect::Effect::P5PrimeUtrVariant)
         }
 
-        // Get exon sequence
+        // Exon effect
         if !exon_annot.is_empty() {
             transcript_myth.extend_effect(
-                exon_effect(translate, sequences, exon_annot.as_ref(), &variant).as_ref(),
+                exon_effect(
+                    translate,
+                    sequences,
+                    exon_annot.as_ref(),
+                    &variant,
+                    start_position,
+                    stop_position,
+                )
+                .as_ref(),
             );
         }
 
@@ -209,6 +227,8 @@ fn exon_effect(
     sequences: &sequences_db::SequencesDataBase,
     exon_annot: &[&annotation::Annotation],
     variant: &variant::Variant,
+    start_position: std::option::Option<u64>,
+    stop_position: std::option::Option<u64>,
 ) -> Vec<effect::Effect> {
     let mut effects = vec![];
 
@@ -232,20 +252,21 @@ fn exon_effect(
         .map(|a| a.1.clone())
         .collect::<Vec<(core::ops::Range<u64>, annotation::Strand)>>();
 
-    // Edit sequence with variant
+    // Get transcript sequence
     let original_seq = sequences.get_transcript(exon_annot[0].get_seqname(), &exons);
 
-    // Found position
-    let options = exons
+    // Found position of variant
+    let exon_target = if let Some(e) = exons
         .iter()
-        .position(|e| variant.position > e.0.start && variant.position < e.0.end);
-    if options.is_none() {
+        .position(|e| variant.position > e.0.start && variant.position < e.0.end)
+    {
+        e
+    } else {
+        // Variant isn't present in a an exon end of investigation
         return effects;
-    }
+    };
 
-    let exon_target = options.unwrap();
-
-    // Splice junction
+    // Check if variant is on a splice junction
     let variant_range = variant.position
         ..(variant.position + variant.ref_seq.len().max(variant.alt_seq.len()) as u64);
 
@@ -260,16 +281,16 @@ fn exon_effect(
         effects.push(effect::Effect::SpliceDonorVariant)
     }
 
-    // Variant only change
+    // Check if variant produce frameshift
     let len_diff = variant.ref_seq.len().abs_diff(variant.alt_seq.len());
-    if len_diff == 0 {
-        // TODO fix this
-    } else if len_diff % 3 != 0 {
-        effects.push(effect::Effect::FrameshiftVariant)
-    } else if variant.ref_seq.len() < variant.alt_seq.len() {
-        effects.push(effect::Effect::ConservativeInframeInsertion)
-    } else {
-        effects.push(effect::Effect::ConservativeInframeDeletion)
+    if len_diff != 0 {
+        if len_diff % 3 != 0 {
+            effects.push(effect::Effect::FrameshiftVariant)
+        } else if variant.ref_seq.len() < variant.alt_seq.len() {
+            effects.push(effect::Effect::ConservativeInframeInsertion)
+        } else {
+            effects.push(effect::Effect::ConservativeInframeDeletion)
+        }
     }
 
     // Get sequence
@@ -291,7 +312,41 @@ fn exon_effect(
         .cloned()
         .collect::<Vec<u8>>();
 
-    let _aa = translate.translate(&variant_seq);
+    dbg!(start_position);
+    dbg!(variant.position);
+    let start = if let Some(s) = start_position {
+        if let Some(exon_index) = exons.iter().position(|e| s > e.0.start && s < e.0.end) {
+            if variant.position < s {
+                (s - exons[exon_index].0.start) as usize + len_diff
+            } else {
+                (s - exons[exon_index].0.start) as usize
+            }
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    let stop = if let Some(s) = stop_position {
+        if let Some(exon_index) = exons.iter().position(|e| s > e.0.start && s < e.0.end) {
+            if variant.position > s {
+                (s - exons[exon_index].0.start) as usize + len_diff
+            } else {
+                dbg!(s, exons[exon_index].0.start);
+                (s - exons[exon_index].0.start) as usize
+            }
+        } else {
+            variant_seq.len()
+        }
+    } else {
+        variant_seq.len()
+    };
+
+    dbg!(start, stop);
+    let var_coding_seq = &variant_seq[start..stop];
+
+    let _aa = translate.translate(&var_coding_seq);
 
     effects
 }
@@ -321,13 +376,18 @@ mod tests {
 {0}	knownGene	exon	13221	14409	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=3;exon_id=gene1.3
 {0}	knownGene	transcript	17369	17436	.	-	.	gene_id=gene2;transcript_id=gene2
 {0}	knownGene	exon	17369	17436	.	-	.	gene_id=gene2;transcript_id=gene2;exon_number=1;exon_id=gene2.1
-{0}	knownGene	transcript	29554	31097	.	+	.	gene_id=gene3;transcript_id=gene3
+{0}	knownGene	transcript	29544	31107	.	+	.	gene_id=gene3;transcript_id=gene3
 {0}	knownGene	exon	29554	30039	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=1;exon_id=gene3.1
 {0}	knownGene	exon	30564	30667	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=2;exon_id=gene3.2
-{0}	knownGene	exon	30976	31097	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3";
+{0}	knownGene	exon	30976	31097	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3
+";
 
-    #[test]
-    fn variant_annotation() -> error::Result<()> {
+    fn setup() -> error::Result<(
+        translate::Translate,
+        sequences_db::SequencesDataBase,
+        annotations_db::AnnotationsDataBase,
+        Vec<u8>,
+    )> {
         // generate fasta
         let mut rng = biotest::rand();
         let seq_gen = biotest::Fasta::builder().sequence_len(40_000).build()?;
@@ -348,88 +408,322 @@ mod tests {
         // produce translate worker
         let translate = translate::Translate::default();
 
-        // target variant
-        let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
-            position: 29654,
-            ref_seq: b"c".to_vec(),
-            alt_seq: b"a".to_vec(),
-        };
+        return Ok((
+            translate,
+            seq_db,
+            annotations_db,
+            fasta_reader[1..11].to_vec(),
+        ));
+    }
+
+    #[test]
+    fn basic_variant_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
 
         let exon_annot = annotations_db
-            .get_annotation(&fasta_reader[1..11], 29554..31097)
+            .get_annotation(&contig_name, 29554..31097)
             .iter()
             .filter(|a| a.get_feature() == b"exon")
             .cloned()
             .collect::<Vec<&annotation::Annotation>>();
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        // target variant
+        let variant = variant::Variant {
+            seqname: contig_name,
+            position: 29654,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"a".to_vec(),
+        };
+
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
 
         assert_eq!(effects, vec![]);
 
+        Ok(())
+    }
+
+    #[test]
+    fn splice_acceptor_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
         let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
+            seqname: contig_name,
             position: 30565,
             ref_seq: b"c".to_vec(),
             alt_seq: b"a".to_vec(),
         };
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
 
         assert_eq!(effects, vec![effect::Effect::SpliceAcceptorVariant,]);
 
+        Ok(())
+    }
+
+    #[test]
+    fn splice_donor_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
         let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
+            seqname: contig_name,
             position: 30665,
             ref_seq: b"c".to_vec(),
             alt_seq: b"a".to_vec(),
         };
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
 
-        assert_eq!(effects, vec![effect::Effect::SpliceDonorVariant]);
+        assert_eq!(effects, vec![effect::Effect::SpliceDonorVariant,]);
 
+        Ok(())
+    }
+
+    #[test]
+    fn framshift_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
         let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
+            seqname: contig_name,
             position: 29654,
             ref_seq: b"c".to_vec(),
             alt_seq: b"aa".to_vec(),
         };
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
 
-        assert_eq!(effects, vec![effect::Effect::FrameshiftVariant]);
+        assert_eq!(effects, vec![effect::Effect::FrameshiftVariant,]);
 
+        Ok(())
+    }
+
+    #[test]
+    fn codon_insertion_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
         let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
+            seqname: contig_name,
             position: 29654,
             ref_seq: b"c".to_vec(),
             alt_seq: b"caaa".to_vec(),
         };
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
 
-        assert_eq!(effects, vec![effect::Effect::ConservativeInframeInsertion]);
+        assert_eq!(effects, vec![effect::Effect::ConservativeInframeInsertion,]);
 
+        Ok(())
+    }
+
+    #[test]
+    fn codon_deletion_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
         let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
+            seqname: contig_name,
             position: 29654,
             ref_seq: b"caaa".to_vec(),
             alt_seq: b"c".to_vec(),
         };
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
 
-        assert_eq!(effects, vec![effect::Effect::ConservativeInframeDeletion]);
+        assert_eq!(effects, vec![effect::Effect::ConservativeInframeDeletion,]);
 
+        Ok(())
+    }
+
+    #[test]
+    fn not_a_variant_annotation() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
         let variant = variant::Variant {
-            seqname: fasta_reader[1..11].to_vec(),
+            seqname: contig_name,
             position: 30100,
             ref_seq: b"c".to_vec(),
             alt_seq: b"c".to_vec(),
         };
 
-        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant);
+        let effects = exon_effect(&translate, &seq_db, &exon_annot, &variant, None, None);
+
+        assert_eq!(effects, vec![]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn before_start() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
+        let variant = variant::Variant {
+            seqname: contig_name,
+            position: 29560,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"c".to_vec(),
+        };
+
+        let effects = exon_effect(
+            &translate,
+            &seq_db,
+            &exon_annot,
+            &variant,
+            Some(29565),
+            Some(31042),
+        );
+
+        assert_eq!(effects, vec![]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn after_start() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
+        let variant = variant::Variant {
+            seqname: contig_name,
+            position: 29570,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"c".to_vec(),
+        };
+
+        let effects = exon_effect(
+            &translate,
+            &seq_db,
+            &exon_annot,
+            &variant,
+            Some(29565),
+            Some(31042),
+        );
+
+        assert_eq!(effects, vec![]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn before_stop() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
+        let variant = variant::Variant {
+            seqname: contig_name,
+            position: 31020,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"c".to_vec(),
+        };
+
+        let effects = exon_effect(
+            &translate,
+            &seq_db,
+            &exon_annot,
+            &variant,
+            Some(29565),
+            Some(31042),
+        );
+
+        assert_eq!(effects, vec![]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn after_stop() -> error::Result<()> {
+        let (translate, seq_db, annotations_db, contig_name) = setup()?;
+
+        let exon_annot = annotations_db
+            .get_annotation(&contig_name, 29554..31097)
+            .iter()
+            .filter(|a| a.get_feature() == b"exon")
+            .cloned()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        // target variant
+        let variant = variant::Variant {
+            seqname: contig_name,
+            position: 31020,
+            ref_seq: b"c".to_vec(),
+            alt_seq: b"c".to_vec(),
+        };
+
+        let effects = exon_effect(
+            &translate,
+            &seq_db,
+            &exon_annot,
+            &variant,
+            Some(29565),
+            Some(31012),
+        );
 
         assert_eq!(effects, vec![]);
 
