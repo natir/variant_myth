@@ -2,5 +2,5 @@
 engine = "Llvm"
 
 [report]
-output-dir = "docs"
+output-dir = "website"
 out = [ "Html" ]

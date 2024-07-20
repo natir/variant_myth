@@ -4,10 +4,10 @@ authors      = ["Pierre Marijon"]
 description  = "A variant annotater."
 language     = "en"
 multilingual = false
-src          = "docs"
+src          = "website"
 
 [build]
-build-dir      = "website"
+build-dir      = "public"
 create-missing = false
 
 [output.html]

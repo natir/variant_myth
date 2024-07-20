@@ -54,6 +54,7 @@ stderrlog      = { version = "0.5" }
 
 
 [dev-dependencies]
+## Benchmark management
 criterion      = { version = "0.5" }
 
 ## Functional test

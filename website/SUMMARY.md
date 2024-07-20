@@ -6,9 +6,11 @@
 
 - [Install](install.md)
 - [Usage](usage.md)
+- [Example](example.md)
 
 # Contributor Guide
 
+- [Dev documentation](doc/variant_myth/index.html)
 - [Code Coverage](tarpaulin-report.html)
 - [Contributing](contributing.md)
 - [Code of Conduct](code_of_conduct.md)
