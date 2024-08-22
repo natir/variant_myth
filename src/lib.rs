@@ -312,8 +312,6 @@ fn exon_effect(
         .cloned()
         .collect::<Vec<u8>>();
 
-    dbg!(start_position);
-    dbg!(variant.position);
     let start = if let Some(s) = start_position {
         if let Some(exon_index) = exons.iter().position(|e| s > e.0.start && s < e.0.end) {
             if variant.position < s {
@@ -343,10 +341,12 @@ fn exon_effect(
         variant_seq.len()
     };
 
-    dbg!(start, stop);
     let var_coding_seq = &variant_seq[start..stop];
 
-    let _aa = translate.translate(&var_coding_seq);
+    let aa = translate.translate(var_coding_seq);
+
+    dbg!(String::from_utf8(variant_seq));
+    dbg!(String::from_utf8(aa));
 
     effects
 }

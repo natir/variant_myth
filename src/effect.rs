@@ -105,9 +105,9 @@ pub enum Effect {
     /// A sequence variant that changes the coding sequence.
     CodingSequenceVariant,
     /// An inframe decrease in cds length that deletes one or more entire codons from the coding sequence but does not change any remaining codons.
-    ConservativeInframeDeletion,
+    ConservativeInframeDeletion, // Used
     /// An inframe increase in cds length that inserts one or more codons into the coding sequence between existing codons.
-    ConservativeInframeInsertion,
+    ConservativeInframeInsertion, // Used
     /// A sequence variant located in a conserved intergenic region, between genes.
     ConservedIntergenicVariant,
     /// A transcript variant occurring within a conserved region of an intron.
@@ -131,7 +131,7 @@ pub enum Effect {
     /// A sequence variant, caused by an alteration of the genomic sequence, where a deletion fuses genomic features.
     FeatureFusion,
     /// A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three.
-    FrameshiftVariant,
+    FrameshiftVariant, // Used
     /// A sequence variant whereby a two genes have become joined.
     GeneFusion,
     /// A sequence variant where the structure of the gene is changed.
@@ -157,13 +157,13 @@ pub enum Effect {
     /// A sequence variant that causes the reduction of a the 3' UTR with regard to the reference sequence.
     P3PrimeUtrTruncation,
     /// A UTR variant of the 3' UTR.
-    P3PrimeUtrVariant,
+    P3PrimeUtrVariant, // Used
     /// A 5' UTR variant where a premature start codon is introduced, moved or lost.
     P5PrimeUtrPrematureStartCodonGainVariant,
     /// A sequence variant that causes the reduction of a the 5'UTR with regard to the reference sequence.
     P5PrimeUtrTruncation,
     /// A UTR variant of the 5' UTR.
-    P5PrimeUtrVariant,
+    P5PrimeUtrVariant, // Used
     /// A binding site that, in the protein molecule, interacts selectively and non-covalently with polypeptide residues.
     ProteinProteinContact,
     /// A sequence variant whereby at least one base of a codon encoding a rare amino acid is changed, resulting in a different encoded amino acid.
@@ -175,9 +175,9 @@ pub enum Effect {
     /// Any extent of continuous biological sequence.
     SequenceFeature,
     /// A splice variant that changes the 2 base region at the 3' end of an intron.
-    SpliceAcceptorVariant,
+    SpliceAcceptorVariant, // Used
     /// A splice variant that changes the 2 base pair region at the 5' end of an intron.
-    SpliceDonorVariant,
+    SpliceDonorVariant, // Used
     /// A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron.
     SpliceRegionVariant,
     /// A codon variant that changes at least one base of the canonical start codon.

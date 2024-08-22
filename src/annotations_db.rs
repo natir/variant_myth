@@ -3,15 +3,16 @@
 /* std use */
 
 /* crate use */
-use rust_lapper;
 
 /* project use */
 use crate::annotation;
 use crate::error;
 
+const DOMAIN_NUMBER: usize = 8092;
+
 /// Store annotations information associate to intervals
 pub struct AnnotationsDataBase {
-    intervals: ahash::AHashMap<Vec<u8>, rust_lapper::Lapper<u64, annotation::Annotation>>,
+    intervals: ahash::AHashMap<Vec<u8>, iitiiri::Iitii<u64, annotation::Annotation, DOMAIN_NUMBER>>,
 }
 
 impl AnnotationsDataBase {
@@ -22,7 +23,7 @@ impl AnnotationsDataBase {
     ) -> error::Result<Self> {
         let mut intervals_builder: ahash::AHashMap<
             Vec<u8>,
-            Vec<rust_lapper::Interval<u64, annotation::Annotation>>,
+            Vec<iitiiri::Node<u64, annotation::Annotation>>,
         > = ahash::AHashMap::new();
 
         let mut reader = csv::ReaderBuilder::new()
@@ -38,7 +39,7 @@ impl AnnotationsDataBase {
             intervals_builder
                 .entry(seqname.to_vec())
                 .and_modify(
-                    |tree: &mut Vec<rust_lapper::Interval<u64, annotation::Annotation>>| {
+                    |tree: &mut Vec<iitiiri::Node<u64, annotation::Annotation>>| {
                         Self::add_annotion(
                             tree,
                             interval.clone(),
@@ -57,10 +58,10 @@ impl AnnotationsDataBase {
 
         let mut intervals: ahash::AHashMap<
             Vec<u8>,
-            rust_lapper::Lapper<u64, annotation::Annotation>,
+            iitiiri::Iitii<u64, annotation::Annotation, DOMAIN_NUMBER>,
         > = ahash::AHashMap::with_capacity(intervals_builder.len());
         for (key, values) in intervals_builder.drain() {
-            intervals.insert(key, rust_lapper::Lapper::new(values));
+            intervals.insert(key, iitiiri::Iitii::new(values));
         }
 
         Ok(Self { intervals })
@@ -73,9 +74,7 @@ impl AnnotationsDataBase {
         interval: core::ops::Range<u64>,
     ) -> Vec<&annotation::Annotation> {
         if let Some(chr) = self.intervals.get(seqname) {
-            chr.find(interval.start, interval.end)
-                .map(|e| &e.val)
-                .collect()
+            chr.overlap(interval.start, interval.end)
         } else {
             vec![]
         }
@@ -83,7 +82,7 @@ impl AnnotationsDataBase {
 
     /// Add annotation
     fn add_annotion(
-        tree: &mut Vec<rust_lapper::Interval<u64, annotation::Annotation>>,
+        tree: &mut Vec<iitiiri::Node<u64, annotation::Annotation>>,
         interval: core::ops::Range<u64>,
         annotation: annotation::Annotation,
         updown_distance: u64,
@@ -95,23 +94,19 @@ impl AnnotationsDataBase {
                 interval.start - updown_distance
             };
 
-            tree.push(rust_lapper::Interval {
-                start: upstream,
-                stop: interval.start,
-                val: annotation::Annotation::from_annotation(&annotation, b"upstream"),
-            });
-            tree.push(rust_lapper::Interval {
-                start: interval.end,
-                stop: interval.end + updown_distance,
-                val: annotation::Annotation::from_annotation(&annotation, b"downstream"),
-            });
+            tree.push(iitiiri::Node::new(
+                upstream,
+                interval.start,
+                annotation::Annotation::from_annotation(&annotation, b"upstream"),
+            ));
+            tree.push(iitiiri::Node::new(
+                interval.end,
+                interval.end + updown_distance,
+                annotation::Annotation::from_annotation(&annotation, b"downstream"),
+            ));
         }
 
-        tree.push(rust_lapper::Interval {
-            start: interval.start,
-            stop: interval.end,
-            val: annotation,
-        })
+        tree.push(iitiiri::Node::new(interval.start, interval.end, annotation))
     }
 }
 

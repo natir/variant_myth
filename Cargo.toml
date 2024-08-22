@@ -26,7 +26,7 @@ path = "src/main.rs"
 # Specific
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
-rust-lapper    = { version = "1" }
+iitiiri        = { git = "https://github.com/natir/iitiiri.git" }
 
 # Other
 derive_builder   = { version = "0.20" }
@@ -65,7 +65,7 @@ tempfile       = { version = "3" }
 
 [features]
 default = []
-parallel = ["dep:rayon"]
+parallel = ["dep:rayon", "iitiiri/parallel"]
 bench = []
 
 
