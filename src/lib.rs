@@ -21,6 +21,7 @@ pub mod myth;
 pub mod sequences_db;
 pub mod translate;
 pub mod variant;
+pub mod variant2myth;
 
 #[cfg(not(feature = "parallel"))]
 /// For each variants found matching annotations
@@ -66,11 +67,13 @@ where
             .collect::<Vec<serde_json::Result<()>>>()
     });
 
+    let variant2myth = variant2myth::Variant2Myth::new(annotations, translate, sequences);
+
     let results = vcf_reader
         .par_bridge()
         .filter(Result::is_ok)
         .map(error::Result::unwrap)
-        .map(|variant| tx.send(variants2myth(annotations, sequences, translate, variant)))
+        .map(|variant| tx.send(variant2myth.myth(variant)))
         .collect::<Vec<core::result::Result<(), std::sync::mpsc::SendError<myth::Myth>>>>();
 
     for result in results {
@@ -193,7 +196,7 @@ pub fn variants2myth(
 
         // 5' UTR
         if !utr5_annot.is_empty() {
-            transcript_myth.add_effect(effect::Effect::P5PrimeUtrVariant)
+            transcript_myth.add_effect(effect::Effect::FivePrimeUtrVariant)
         }
 
         // Exon effect
@@ -213,7 +216,7 @@ pub fn variants2myth(
 
         // 3' UTR
         if !utr3_annot.is_empty() {
-            transcript_myth.add_effect(effect::Effect::P3PrimeUtrVariant)
+            transcript_myth.add_effect(effect::Effect::ThreePrimeUtrVariant)
         }
 
         myth.add_annotation(transcript_myth.build().unwrap()); // Build error could never append

@@ -48,13 +48,13 @@ impl From<&Effect> for Impact {
 		| Effect::ConservativeInframeInsertion
 		| Effect::DisruptiveInframeDeletion
 		| Effect::MissenseVariant
-		| Effect::P3PrimeUtrTruncation
-		| Effect::P5PrimeUtrTruncation
+		| Effect::ThreePrimeUtrTruncation
+		| Effect::FivePrimeUtrTruncation
             | Effect::DisruptiveInframeInsertion
 		=> Impact::Moderate,
             // Low Impact
 		Effect::InitiatorCodonVariant
-		| Effect::P5PrimeUtrPrematureStartCodonGainVariant
+		| Effect::FivePrimeUtrPrematureStartCodonGainVariant
 		| Effect::SpliceRegionVariant
 		| Effect::SynonymousVariant
 		| Effect::TfBindingSiteVariant
@@ -75,8 +75,8 @@ impl From<&Effect> for Impact {
 		| Effect::IntronVariant
 		| Effect::NonCodingTranscriptExonVariant
 		| Effect::NonCodingTranscriptVariant
-		| Effect::P3PrimeUtrVariant
-		| Effect::P5PrimeUtrVariant
+		| Effect::ThreePrimeUtrVariant
+		| Effect::FivePrimeUtrVariant
 		| Effect::RegulatoryRegionVariant
 		| Effect::SequenceFeature
 		| Effect::UpstreamGeneVariant
@@ -155,15 +155,15 @@ pub enum Effect {
     /// A transcript variant of a non coding RNA gene.
     NonCodingTranscriptVariant,
     /// A sequence variant that causes the reduction of a the 3' UTR with regard to the reference sequence.
-    P3PrimeUtrTruncation,
+    ThreePrimeUtrTruncation,
     /// A UTR variant of the 3' UTR.
-    P3PrimeUtrVariant, // Used
+    ThreePrimeUtrVariant, // Used
     /// A 5' UTR variant where a premature start codon is introduced, moved or lost.
-    P5PrimeUtrPrematureStartCodonGainVariant,
+    FivePrimeUtrPrematureStartCodonGainVariant,
     /// A sequence variant that causes the reduction of a the 5'UTR with regard to the reference sequence.
-    P5PrimeUtrTruncation,
+    FivePrimeUtrTruncation,
     /// A UTR variant of the 5' UTR.
-    P5PrimeUtrVariant, // Used
+    FivePrimeUtrVariant, // Used
     /// A binding site that, in the protein molecule, interacts selectively and non-covalently with polypeptide residues.
     ProteinProteinContact,
     /// A sequence variant whereby at least one base of a codon encoding a rare amino acid is changed, resulting in a different encoded amino acid.
@@ -230,13 +230,13 @@ impl From<Effect> for Impact {
 		| Effect::ConservativeInframeInsertion
 		| Effect::DisruptiveInframeDeletion
 		| Effect::MissenseVariant
-		| Effect::P3PrimeUtrTruncation
-		| Effect::P5PrimeUtrTruncation
+		| Effect::ThreePrimeUtrTruncation
+		| Effect::FivePrimeUtrTruncation
             | Effect::DisruptiveInframeInsertion
 		=> Impact::Moderate,
             // Low Impact
 		Effect::InitiatorCodonVariant
-		| Effect::P5PrimeUtrPrematureStartCodonGainVariant
+		| Effect::FivePrimeUtrPrematureStartCodonGainVariant
 		| Effect::SpliceRegionVariant
 		| Effect::SynonymousVariant
 		| Effect::TfBindingSiteVariant
@@ -257,8 +257,8 @@ impl From<Effect> for Impact {
 		| Effect::IntronVariant
 		| Effect::NonCodingTranscriptExonVariant
 		| Effect::NonCodingTranscriptVariant
-		| Effect::P3PrimeUtrVariant
-		| Effect::P5PrimeUtrVariant
+		| Effect::ThreePrimeUtrVariant
+		| Effect::FivePrimeUtrVariant
 		| Effect::RegulatoryRegionVariant
 		| Effect::SequenceFeature
 		| Effect::UpstreamGeneVariant
@@ -309,13 +309,13 @@ impl From<Effect> for Vec<u8> {
                 b"non_coding_transcript_exon_variant".to_vec()
             }
             Effect::NonCodingTranscriptVariant => b"non_coding_transcript_variant".to_vec(),
-            Effect::P3PrimeUtrTruncation => b"3_prime_UTR_truncation".to_vec(),
-            Effect::P3PrimeUtrVariant => b"3_prime_UTR_variant".to_vec(),
-            Effect::P5PrimeUtrPrematureStartCodonGainVariant => {
+            Effect::ThreePrimeUtrTruncation => b"3_prime_UTR_truncation".to_vec(),
+            Effect::ThreePrimeUtrVariant => b"3_prime_UTR_variant".to_vec(),
+            Effect::FivePrimeUtrPrematureStartCodonGainVariant => {
                 b"5_prime_UTR_premature_start_codon_gain_variant".to_vec()
             }
-            Effect::P5PrimeUtrTruncation => b"5_prime_UTR_truncation".to_vec(),
-            Effect::P5PrimeUtrVariant => b"5_prime_UTR_variant".to_vec(),
+            Effect::FivePrimeUtrTruncation => b"5_prime_UTR_truncation".to_vec(),
+            Effect::FivePrimeUtrVariant => b"5_prime_UTR_variant".to_vec(),
             Effect::ProteinProteinContact => b"protein_protein_contact".to_vec(),
             Effect::RareAminoAcidVariant => b"rare_amino_acid_variant".to_vec(),
             Effect::RearrangedAtDnaLevel => b"rearranged_at_DNA_level".to_vec(),
@@ -495,14 +495,20 @@ mod tests {
             Impact::from(Effect::NonCodingTranscriptVariant),
             Impact::Modifier
         );
-        assert_eq!(Impact::from(Effect::P3PrimeUtrTruncation), Impact::Moderate);
-        assert_eq!(Impact::from(Effect::P3PrimeUtrVariant), Impact::Modifier);
         assert_eq!(
-            Impact::from(Effect::P5PrimeUtrPrematureStartCodonGainVariant),
+            Impact::from(Effect::ThreePrimeUtrTruncation),
+            Impact::Moderate
+        );
+        assert_eq!(Impact::from(Effect::ThreePrimeUtrVariant), Impact::Modifier);
+        assert_eq!(
+            Impact::from(Effect::FivePrimeUtrPrematureStartCodonGainVariant),
             Impact::Low
         );
-        assert_eq!(Impact::from(Effect::P5PrimeUtrTruncation), Impact::Moderate);
-        assert_eq!(Impact::from(Effect::P5PrimeUtrVariant), Impact::Modifier);
+        assert_eq!(
+            Impact::from(Effect::FivePrimeUtrTruncation),
+            Impact::Moderate
+        );
+        assert_eq!(Impact::from(Effect::FivePrimeUtrVariant), Impact::Modifier);
         assert_eq!(Impact::from(Effect::ProteinProteinContact), Impact::High);
         assert_eq!(Impact::from(Effect::RareAminoAcidVariant), Impact::High);
         assert_eq!(Impact::from(Effect::RearrangedAtDnaLevel), Impact::High);
@@ -634,23 +640,23 @@ mod tests {
             b"non_coding_transcript_variant".to_vec()
         );
         assert_eq!(
-            Vec::<u8>::from(Effect::P3PrimeUtrTruncation),
+            Vec::<u8>::from(Effect::ThreePrimeUtrTruncation),
             b"3_prime_UTR_truncation".to_vec()
         );
         assert_eq!(
-            Vec::<u8>::from(Effect::P3PrimeUtrVariant),
+            Vec::<u8>::from(Effect::ThreePrimeUtrVariant),
             b"3_prime_UTR_variant".to_vec()
         );
         assert_eq!(
-            Vec::<u8>::from(Effect::P5PrimeUtrPrematureStartCodonGainVariant),
+            Vec::<u8>::from(Effect::FivePrimeUtrPrematureStartCodonGainVariant),
             b"5_prime_UTR_premature_start_codon_gain_variant".to_vec()
         );
         assert_eq!(
-            Vec::<u8>::from(Effect::P5PrimeUtrTruncation),
+            Vec::<u8>::from(Effect::FivePrimeUtrTruncation),
             b"5_prime_UTR_truncation".to_vec()
         );
         assert_eq!(
-            Vec::<u8>::from(Effect::P5PrimeUtrVariant),
+            Vec::<u8>::from(Effect::FivePrimeUtrVariant),
             b"5_prime_UTR_variant".to_vec()
         );
         assert_eq!(

@@ -83,9 +83,14 @@ impl Myth {
         }
     }
 
-    /// Add transcript from source
+    /// Add annotation to variant
     pub fn add_annotation(&mut self, source: AnnotationMyth) {
         self.annotations.push(source);
+    }
+
+    /// Extend annotation to variant
+    pub fn extend_annotation(&mut self, source: &[AnnotationMyth]) {
+        self.annotations.extend_from_slice(source)
     }
 }
 
