@@ -37,8 +37,6 @@ fn main() -> error::Result<()> {
 
     let (annotations, sequences, translate) = get_database(&params)?;
 
-    return Ok(());
-
     log::info!("Start annotate variant");
     let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
     variant_myth::vcf2json(

@@ -16,6 +16,7 @@ pub mod annotations_db;
 pub mod cli;
 pub mod effect;
 pub mod error;
+pub mod exons2sequences;
 pub mod myth;
 pub mod sequences_db;
 pub mod translate;
@@ -181,7 +182,7 @@ pub fn variants2myth(
 
         let stop_position = transcript_annot
             .iter()
-            .find(|&&x| x.get_feature() == b"start_codon")
+            .find(|&&x| x.get_feature() == b"stop_codon")
             .map(|x| x.get_stop());
 
         let utr3_annot = transcript_annot
@@ -303,50 +304,71 @@ fn exon_effect(
 
     let after_variant = original_seq
         .len()
-        .min(transcript_pos as usize + variant.ref_seq.len());
+        .min(transcript_pos as usize + variant.ref_seq.len() + 1);
 
-    let variant_seq = original_seq[..transcript_pos as usize]
+    let variant_seq = original_seq[..=transcript_pos as usize]
         .iter()
         .chain(&variant.alt_seq)
         .chain(&original_seq[after_variant..])
         .cloned()
         .collect::<Vec<u8>>();
 
+    println!();
+    dbg!(exon_annot);
+    dbg!(variant);
+    dbg!(start_position, stop_position);
     let start = if let Some(s) = start_position {
         if let Some(exon_index) = exons.iter().position(|e| s > e.0.start && s < e.0.end) {
+            if exons[exon_index].1 == annotation::Strand::Reverse {
+                return effects;
+            }
+
+            dbg!(exon_index);
+            dbg!(&exons[exon_index]);
             if variant.position < s {
+                dbg!("start upper than variant position");
                 (s - exons[exon_index].0.start) as usize + len_diff
             } else {
+                dbg!("start lower than variant position");
                 (s - exons[exon_index].0.start) as usize
             }
         } else {
+            dbg!("start not found exon_index");
             0
         }
     } else {
+        dbg!("no start_position");
         0
     };
 
     let stop = if let Some(s) = stop_position {
         if let Some(exon_index) = exons.iter().position(|e| s > e.0.start && s < e.0.end) {
-            if variant.position > s {
-                (s - exons[exon_index].0.start) as usize + len_diff
+            if exons[exon_index].1 == annotation::Strand::Reverse {
+                return effects;
+            }
+
+            dbg!(exon_index);
+            dbg!(&exons[exon_index]);
+            if variant.position < s {
+                dbg!("stop lower than variant position");
+                variant_seq.len() - (exons[exon_index].0.end - s) as usize + len_diff
             } else {
-                dbg!(s, exons[exon_index].0.start);
-                (s - exons[exon_index].0.start) as usize
+                dbg!("stop upper than variant position");
+                variant_seq.len() - (exons[exon_index].0.end - s) as usize
             }
         } else {
+            dbg!("stop not found exon_index");
             variant_seq.len()
         }
     } else {
+        dbg!("no stop_position");
         variant_seq.len()
     };
 
+    dbg!(variant_seq.len(), start, stop);
     let var_coding_seq = &variant_seq[start..stop];
 
     let aa = translate.translate(var_coding_seq);
-
-    dbg!(String::from_utf8(variant_seq));
-    dbg!(String::from_utf8(aa));
 
     effects
 }
