@@ -52,7 +52,7 @@ impl std::fmt::Debug for Variant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         write!(
             f,
-            "Variant {{ seqname: b\"{}\".to_vec(), position: {}, ref_seq: b\"{}\".to_vec(), , alt_seq: b\"{}\".to_vec }}" ,
+            "Variant {{ seqname: b\"{}\".to_vec(), position: {}, ref_seq: b\"{}\".to_vec(), alt_seq: b\"{}\".to_vec }}" ,
             String::from_utf8(self.seqname.to_vec()).unwrap(),
             self.position,
             String::from_utf8(self.ref_seq.to_vec()).unwrap(),
@@ -163,7 +163,7 @@ mod tests {
 
         assert_eq!(records[1].get_interval(), (2036067340u64..2036067341u64));
 
-        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516245, ref_seq: b\"A\".to_vec(), , alt_seq: b\".\".to_vec }".to_string());
+        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516245, ref_seq: b\"A\".to_vec(), alt_seq: b\".\".to_vec }".to_string());
         Ok(())
     }
 }
