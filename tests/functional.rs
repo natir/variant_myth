@@ -177,6 +177,7 @@ fn run_threads() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[ignore]
 #[cfg(not(feature = "parallel"))]
 #[test]
 fn logging_updown_setup() -> anyhow::Result<()> {

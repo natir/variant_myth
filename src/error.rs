@@ -41,6 +41,19 @@ pub enum Error {
     /// Error in attribute name
     #[error("Attribute name not support {0}")]
     AttributeNameNotSupport(String),
+
+    /// Sequence not in SequenceDatabase
+    #[error("Sequence name {0} not present in sequence file")]
+    SeqNotInReferences(String),
+
+    /// Interval not in sequence
+    #[error("Interval {}..{} not in {name}", interval.start, interval.end)]
+    IntervalNotInSeq {
+        /// Interval not in sequence
+        interval: core::ops::Range<u64>,
+        /// Name of sequence
+        name: String,
+    },
 }
 
 /// Alias of result

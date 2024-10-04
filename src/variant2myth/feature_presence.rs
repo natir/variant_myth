@@ -7,7 +7,6 @@
 /* project use */
 use crate::annotation;
 use crate::effect;
-use crate::myth;
 use crate::variant;
 use crate::variant2myth;
 
@@ -43,5 +42,4 @@ mod tests {
     /* crate use */
 
     /* project use */
-    use super::*;
 }

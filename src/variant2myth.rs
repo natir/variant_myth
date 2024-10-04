@@ -25,11 +25,12 @@ trait Annotator {
     ) -> Vec<effect::Effect>;
 }
 
-struct Variant2Myth<'a> {
+/// Struct that associate to a variant myth
+pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
     translate: &'a translate::Translate,
     sequences: &'a sequences_db::SequencesDataBase,
-    annotators: [&'static dyn Annotator; 4],
+    annotators: [&'static dyn Annotator; 5],
 }
 
 static UPSTREAM: feature_presence::FeaturePresence =
@@ -44,28 +45,28 @@ static SEQ_ANALYSIS: sequence_analysis::SequenceAnalysis =
     sequence_analysis::SequenceAnalysis::new();
 
 impl<'a> Variant2Myth<'a> {
+    /// Create Variant2Myth struct
     pub fn new(
         annotations: &'a annotations_db::AnnotationsDataBase,
         translate: &'a translate::Translate,
         sequences: &'a sequences_db::SequencesDataBase,
     ) -> Self {
-        let annotators = [
-            &UPSTREAM as &'static (dyn Annotator + 'static),
-            &DOWNSTREAM as &'static (dyn Annotator + 'static),
-            &FIVE_PRIME_UTR as &'static (dyn Annotator + 'static),
-            &THREE_PRIME_UTR as &'static (dyn Annotator + 'static),
-            //    &SEQ_ANALYSIS as &'static (dyn Annotator + 'static),
-        ];
-
         Self {
             annotations,
             translate,
             sequences,
-            annotators,
+            annotators: [
+                &UPSTREAM as &'static (dyn Annotator + 'static),
+                &DOWNSTREAM as &'static (dyn Annotator + 'static),
+                &FIVE_PRIME_UTR as &'static (dyn Annotator + 'static),
+                &THREE_PRIME_UTR as &'static (dyn Annotator + 'static),
+                &SEQ_ANALYSIS as &'static (dyn Annotator + 'static),
+            ],
         }
     }
 
-    pub fn myth(&mut self, variant: variant::Variant) -> myth::Myth {
+    /// Generate myth associate to variant
+    pub fn myth(&self, variant: variant::Variant) -> myth::Myth {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
         if variant.alt_seq.contains(&b'*') {
