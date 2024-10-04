@@ -25,47 +25,49 @@ trait Annotator {
     ) -> Vec<effect::Effect>;
 }
 
-struct Variant2Myth<'a> {
+/// Struct that associate to a variant myth
+pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
-    translate: &'a translate::Translate,
-    sequences: &'a sequences_db::SequencesDataBase,
-    annotators: [&'static dyn Annotator; 4],
+    annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>,
 }
 
-static UPSTREAM: feature_presence::FeaturePresence =
-    feature_presence::FeaturePresence::new(b"upstream", effect::Effect::UpstreamGeneVariant);
-static DOWNSTREAM: feature_presence::FeaturePresence =
-    feature_presence::FeaturePresence::new(b"downstream", effect::Effect::DownstreamGeneVariant);
-static FIVE_PRIME_UTR: feature_presence::FeaturePresence =
-    feature_presence::FeaturePresence::new(b"5UTR", effect::Effect::FivePrimeUtrVariant);
-static THREE_PRIME_UTR: feature_presence::FeaturePresence =
-    feature_presence::FeaturePresence::new(b"3UTR", effect::Effect::ThreePrimeUtrVariant);
-static SEQ_ANALYSIS: sequence_analysis::SequenceAnalysis =
-    sequence_analysis::SequenceAnalysis::new();
-
 impl<'a> Variant2Myth<'a> {
+    /// Create Variant2Myth struct
     pub fn new(
         annotations: &'a annotations_db::AnnotationsDataBase,
         translate: &'a translate::Translate,
         sequences: &'a sequences_db::SequencesDataBase,
     ) -> Self {
-        let annotators = [
-            &UPSTREAM as &'static (dyn Annotator + 'static),
-            &DOWNSTREAM as &'static (dyn Annotator + 'static),
-            &FIVE_PRIME_UTR as &'static (dyn Annotator + 'static),
-            &THREE_PRIME_UTR as &'static (dyn Annotator + 'static),
-            //    &SEQ_ANALYSIS as &'static (dyn Annotator + 'static),
+        let annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>> = vec![
+            Box::new(feature_presence::FeaturePresence::new(
+                b"upstream",
+                effect::Effect::UpstreamGeneVariant,
+            )),
+            Box::new(feature_presence::FeaturePresence::new(
+                b"downstream",
+                effect::Effect::DownstreamGeneVariant,
+            )),
+            Box::new(feature_presence::FeaturePresence::new(
+                b"5UTR",
+                effect::Effect::FivePrimeUtrVariant,
+            )),
+            Box::new(feature_presence::FeaturePresence::new(
+                b"3UTR",
+                effect::Effect::ThreePrimeUtrVariant,
+            )),
+            Box::new(sequence_analysis::SequenceAnalysis::new(
+                translate, sequences,
+            )),
         ];
 
         Self {
             annotations,
-            translate,
-            sequences,
             annotators,
         }
     }
 
-    pub fn myth(&mut self, variant: variant::Variant) -> myth::Myth {
+    /// Generate myth associate to variant
+    pub fn myth(&self, variant: variant::Variant) -> myth::Myth {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
         if variant.alt_seq.contains(&b'*') {

@@ -222,19 +222,19 @@ impl Annotation {
         obj
     }
 
-    /// Get start
+    /// Get start position 0-based
     pub fn get_start(&self) -> u64 {
-        self.start
+        self.start - 1
     }
 
-    /// Get stop
+    /// Get stop position 0-based
     pub fn get_stop(&self) -> u64 {
-        self.stop
+        self.stop - 1
     }
 
-    /// Create interval associate with annotation
+    /// Create interval associate with annotation 0-based
     pub fn get_interval(&self) -> core::ops::Range<u64> {
-        self.start..self.stop
+        (self.start - 1)..(self.stop - 1)
     }
 
     /// Get seqname
@@ -270,6 +270,22 @@ impl Annotation {
     /// Get transcript id
     pub fn get_transcript_id(&self) -> &[u8] {
         self.attribute.get_transcript_id()
+    }
+
+    #[cfg(test)]
+    /// Generate a fake annotation with a seqname, start and stop
+    pub fn test_annotation(seqname: Vec<u8>, start: u64, stop: u64) -> Self {
+        Self {
+            seqname,
+            source: b"variant_myth".to_vec(),
+            feature: b"test".to_vec(),
+            start,
+            stop,
+            score: Score(f64::INFINITY),
+            strand: Strand::Forward,
+            frame: Frame::Unknow,
+            attribute: Attribute::default(),
+        }
     }
 }
 
@@ -363,7 +379,7 @@ mod tests {
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
 
-        assert_eq!(annotation.get_interval(), 29554..31097);
+        assert_eq!(annotation.get_interval(), 29553..31096);
         assert_eq!(annotation.get_seqname(), b"chr1");
         assert_eq!(annotation.get_source(), b"knownGene");
         assert_eq!(annotation.get_feature(), b"transcript");
@@ -424,5 +440,21 @@ mod tests {
         assert!(matches!(Annotation::from_byte_record(&record), _result));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_annotation() {
+        let annotation = Annotation::test_annotation(b"test_annotation_test".to_vec(), 10, 110);
+
+        // set value
+        assert_eq!(annotation.get_seqname(), b"test_annotation_test");
+        assert_eq!(annotation.get_start(), 9);
+        assert_eq!(annotation.get_stop(), 109);
+
+        // default value
+        assert_eq!(annotation.get_source(), b"variant_myth");
+        assert_eq!(annotation.get_feature(), b"test");
+        assert_eq!(annotation.get_strand(), &Strand::Forward);
+        assert_eq!(annotation.get_frame(), &Frame::Unknow);
     }
 }

@@ -46,6 +46,17 @@ impl Variant {
     pub fn get_interval(&self) -> core::ops::Range<u64> {
         self.position..self.position + self.ref_seq.len() as u64
     }
+
+    #[cfg(test)]
+    /// Generate a fake variant with a seqname, position, ref_seq, alt_seqdb
+    pub fn test_variant(seqname: &[u8], position: u64, ref_seq: &[u8], alt_seq: &[u8]) -> Variant {
+        Self {
+            seqname: seqname.to_vec(),
+            position,
+            ref_seq: ref_seq.to_vec(),
+            alt_seq: alt_seq.to_vec(),
+        }
+    }
 }
 
 impl std::fmt::Debug for Variant {
@@ -165,5 +176,15 @@ mod tests {
 
         assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516245, ref_seq: b\"A\".to_vec(), alt_seq: b\".\".to_vec }".to_string());
         Ok(())
+    }
+
+    #[test]
+    fn test_variant() {
+        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"A");
+
+        assert_eq!(variant.seqname, b"chr1");
+        assert_eq!(variant.position, 62103);
+        assert_eq!(variant.ref_seq, b"ACT");
+        assert_eq!(variant.alt_seq, b"A");
     }
 }
