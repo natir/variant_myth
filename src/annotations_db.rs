@@ -29,6 +29,7 @@ impl AnnotationsDataBase {
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'\t')
             .has_headers(false)
+            .comment(Some(b'#'))
             .from_reader(input);
 
         for result in reader.byte_records() {
