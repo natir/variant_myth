@@ -7,29 +7,40 @@
 /* project use */
 use crate::annotation;
 use crate::effect;
+use crate::sequences_db;
+use crate::translate;
 use crate::variant;
 use crate::variant2myth;
 
-pub struct SequenceAnalysis {}
+pub struct SequenceAnalysis<'a> {
+    translate: &'a translate::Translate,
+    sequences: &'a sequences_db::SequencesDataBase,
+}
 
-impl SequenceAnalysis {
-    pub const fn new() -> Self {
-        Self {}
+impl<'a> SequenceAnalysis<'a> {
+    pub const fn new(
+        translate: &'a translate::Translate,
+        sequences: &'a sequences_db::SequencesDataBase,
+    ) -> Self {
+        Self {
+            translate,
+            sequences,
+        }
     }
 }
 
-impl variant2myth::Annotator for SequenceAnalysis {
+impl<'a> variant2myth::Annotator for SequenceAnalysis<'a> {
     fn annotate(
         &self,
         annotations: &[&annotation::Annotation],
-        _variant: &variant::Variant,
+        variant: &variant::Variant,
     ) -> Vec<effect::Effect> {
-        let _start_position = annotations
+        let start_position = annotations
             .iter()
             .find(|&&x| x.get_feature() == b"start_codon")
             .map(|x| x.get_start());
 
-        let _stop_position = annotations
+        let stop_position = annotations
             .iter()
             .find(|&&x| x.get_feature() == b"stop_codon")
             .map(|x| x.get_stop());
@@ -39,6 +50,58 @@ impl variant2myth::Annotator for SequenceAnalysis {
             .filter(|a| a.get_feature() == b"exon")
             .cloned()
             .collect::<Vec<&annotation::Annotation>>();
+
+        let strand = annotations
+            .first()
+            .map(|x| x.get_strand())
+            .unwrap_or(&annotation::Strand::Forward);
+
+        let epissed = match self.sequences.epissed(annotations, *strand) {
+            Ok(sequence) => sequence,
+            Err(error) => {
+                log::error!("{:?}", error);
+                return vec![];
+            }
+        };
+
+        let epissed_var = match self.sequences.epissed_edit(annotations, *strand, variant) {
+            Ok(sequence) => sequence,
+            Err(error) => {
+                log::error!("{:?}", error);
+                return vec![];
+            }
+        };
+
+        let coding =
+            match self
+                .sequences
+                .coding(annotations, *strand, start_position, stop_position)
+            {
+                Ok(sequence) => sequence,
+                Err(error) => {
+                    log::error!("{:?}", error);
+                    return vec![];
+                }
+            };
+
+        let coding_var = match self.sequences.coding_edit(
+            annotations,
+            *strand,
+            start_position,
+            stop_position,
+            variant,
+        ) {
+            Ok(sequence) => sequence,
+            Err(error) => {
+                log::error!("{:?}", error);
+                return vec![];
+            }
+        };
+
+        let translate = self.translate.translate(&coding);
+        let translate_var = self.translate.translate(&coding_var);
+
+        log::info!("{}", String::from_utf8(translate).unwrap());
 
         vec![]
     }
