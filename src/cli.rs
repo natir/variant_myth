@@ -33,7 +33,7 @@ pub struct Command {
 
     /// Translate table path
     #[clap(short = 't', long = "translate")]
-    translate_path: std::path::PathBuf,
+    translate_path: Option<std::path::PathBuf>,
 
     /// Output path
     #[clap(short = 'o', long = "output")]
@@ -104,8 +104,14 @@ impl Command {
     /// Get translate reader
     pub fn translate(
         &self,
-    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
-        Command::get_reader(&self.translate_path).map(std::io::BufReader::new)
+    ) -> error::Result<Option<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>>> {
+        if let Some(path) = &self.translate_path {
+            Command::get_reader(&path)
+                .map(std::io::BufReader::new)
+                .map(Some)
+        } else {
+            Ok(None)
+        }
     }
 
     /// Get output writer

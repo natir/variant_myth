@@ -72,7 +72,11 @@ fn get_database(
     log::info!("End read annotations");
 
     log::info!("Start read translation table");
-    let translate = translate::Translate::from_reader(params.translate()?)?;
+    let translate = if let Some(reader) = params.translate()? {
+        translate::Translate::from_reader(reader)?
+    } else {
+        translate::Translate::default()
+    };
     log::info!("End read translation table");
 
     Ok((annotations, sequences, translate))
