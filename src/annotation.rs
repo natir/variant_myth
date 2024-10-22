@@ -201,6 +201,7 @@ impl Annotation {
                 strand: match record.get(6).unwrap() {
                     b"+" => Strand::Forward,
                     b"-" => Strand::Reverse,
+                    b"." => Strand::Forward,
                     _ => return Err(error::Error::GffBadStrand.into()),
                 },
                 frame: match record.get(7).unwrap() {
