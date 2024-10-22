@@ -107,7 +107,7 @@ mod tests {
     /* project use */
     use super::*;
 
-    const GFF: &[u8] =
+    const _GFF: &[u8] =
         b"{0}	knownGene	transcript	11869	14409	.	+	.	gene_id=gene1;transcript_id=gene1
 {0}	knownGene	exon	11869	12227	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=1;exon_id=gene1.1
 {0}	knownGene	exon	12613	12721	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=2;exon_id=gene1.2
@@ -137,7 +137,7 @@ mod tests {
         // produce gff
         let gff_reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
             std::io::BufReader::new(Box::new(std::io::Cursor::new(
-                GFF.replace(b"{0}", &fasta_reader[1..11]),
+                _GFF.replace(b"{0}", &fasta_reader[1..11]),
             )));
         let annotations_db = annotations_db::AnnotationsDataBase::from_reader(gff_reader, 100)?;
 
@@ -146,11 +146,11 @@ mod tests {
         // produce translate worker
         let translate = translate::Translate::default();
 
-        return Ok((
+        Ok((
             translate,
             seq_db,
             annotations_db,
             fasta_reader[1..11].to_vec(),
-        ));
+        ))
     }
 }

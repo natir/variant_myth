@@ -31,7 +31,7 @@ pub struct Command {
     #[clap(short = 'a', long = "annotations")]
     annotations_path: Vec<std::path::PathBuf>,
 
-    /// Translate table path
+    /// Translate table path, if not set use human
     #[clap(short = 't', long = "translate")]
     translate_path: Option<std::path::PathBuf>,
 
@@ -106,7 +106,7 @@ impl Command {
         &self,
     ) -> error::Result<Option<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>>> {
         if let Some(path) = &self.translate_path {
-            Command::get_reader(&path)
+            Command::get_reader(path)
                 .map(std::io::BufReader::new)
                 .map(Some)
         } else {

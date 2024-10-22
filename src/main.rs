@@ -114,10 +114,15 @@ fn get_database(
     let translate_reader = params.translate()?;
     let translate_thread = std::thread::spawn(|| {
         log::info!("Start read translation table");
-        let translate = translate::Translate::from_reader(translate_reader)?;
+        let translate: Result<translate::Translate, anyhow::Error> =
+            if let Some(reader) = translate_reader {
+                translate::Translate::from_reader(reader)
+            } else {
+                Ok(translate::Translate::default())
+            };
         log::info!("End read translation table");
 
-        Ok::<translate::Translate, anyhow::Error>(translate)
+        translate
     });
 
     Ok((

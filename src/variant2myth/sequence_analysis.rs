@@ -29,7 +29,7 @@ impl<'a> SequenceAnalysis<'a> {
     }
 }
 
-impl<'a> variant2myth::Annotator for SequenceAnalysis<'a> {
+impl variant2myth::Annotator for SequenceAnalysis<'_> {
     fn annotate(
         &self,
         annotations: &[&annotation::Annotation],
@@ -56,7 +56,7 @@ impl<'a> variant2myth::Annotator for SequenceAnalysis<'a> {
             .map(|x| x.get_strand())
             .unwrap_or(&annotation::Strand::Forward);
 
-        let epissed = match self.sequences.epissed(annotations, *strand) {
+        let _epissed = match self.sequences.epissed(annotations, *strand) {
             Ok(sequence) => sequence,
             Err(error) => {
                 log::error!("{:?}", error);
@@ -64,7 +64,7 @@ impl<'a> variant2myth::Annotator for SequenceAnalysis<'a> {
             }
         };
 
-        let epissed_var = match self.sequences.epissed_edit(annotations, *strand, variant) {
+        let _epissed_var = match self.sequences.epissed_edit(annotations, *strand, variant) {
             Ok(sequence) => sequence,
             Err(error) => {
                 log::error!("{:?}", error);
@@ -99,7 +99,7 @@ impl<'a> variant2myth::Annotator for SequenceAnalysis<'a> {
         };
 
         let translate = self.translate.translate(&coding);
-        let translate_var = self.translate.translate(&coding_var);
+        let _translate_var = self.translate.translate(&coding_var);
 
         log::info!("{}", String::from_utf8(translate).unwrap());
 
