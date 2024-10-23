@@ -53,11 +53,9 @@ impl std::fmt::Display for Frame {
 /// Store attribute of gff record
 #[derive(Debug, Clone, std::default::Default, PartialEq, Eq)]
 pub struct Attribute {
-    gene_id: Vec<u8>,
-    transcript_id: Vec<u8>,
-    gene_name: Vec<u8>,
-    exon_number: u64,
-    exon_id: Vec<u8>,
+    id: Vec<u8>,     // ID=
+    name: Vec<u8>,   // Name=
+    parent: Vec<u8>, // Parent=
 }
 
 impl Attribute {
@@ -71,31 +69,18 @@ impl Attribute {
 
         for attribute in slice.split_str(";") {
             match attribute {
-                [b'g', b'e', b'n', b'e', b'_', b'i', b'd', b'=', value @ ..] => {
-                    obj.gene_id = value.to_vec()
-                }
-                [b't', b'r', b'a', b'n', b's', b'c', b'r', b'i', b'p', b't', b'_', b'i', b'd', b'=', value @ ..] => {
-                    obj.transcript_id = value.to_vec()
-                }
-                [b'g', b'e', b'n', b'e', b'_', b'n', b'a', b'm', b'e', b'=', value @ ..] => {
-                    obj.gene_name = value.to_vec()
-                }
-                [b'e', b'x', b'o', b'n', b'_', b'n', b'u', b'm', b'b', b'e', b'r', b'=', value @ ..] => {
-                    obj.exon_number =
-                        unsafe { String::from_utf8_unchecked(value.to_vec()).parse::<u64>()? }
-                }
-                [b'e', b'x', b'o', b'n', b'_', b'i', b'd', b'=', value @ ..] => {
-                    obj.exon_id = value.to_vec()
+                [b'I', b'D', b'=', value @ ..] => obj.id = value.to_vec(),
+                [b'N', b'a', b'm', b'e', b'=', value @ ..] => obj.name = value.to_vec(),
+                [b'P', b'a', b'r', b'e', b'n', b't', b'=', value @ ..] => {
+                    obj.parent = value.to_vec()
                 }
                 _ => {
-                    return unsafe {
-                        Err(
-                            error::Error::AttributeNameNotSupport(String::from_utf8_unchecked(
-                                attribute.to_vec(),
-                            ))
-                            .into(),
-                        )
-                    }
+                    log::error!(
+                        "{:?}",
+                        error::Error::AttributeNameNotSupport(unsafe {
+                            String::from_utf8_unchecked(attribute.to_vec())
+                        })
+                    );
                 }
             }
         }
@@ -104,49 +89,47 @@ impl Attribute {
     }
 
     /// Get gene name
-    pub fn get_gene_name(&self) -> &[u8] {
-        &self.gene_name
+    pub fn get_id(&self) -> &[u8] {
+        &self.id
     }
 
     /// Get transcript_id
-    pub fn get_transcript_id(&self) -> &[u8] {
-        &self.transcript_id
+    pub fn get_name(&self) -> &[u8] {
+        &self.name
     }
 
     /// Get exon_number
-    pub fn get_exon_number(&self) -> u64 {
-        self.exon_number
+    pub fn get_parent(&self) -> &[u8] {
+        &self.parent
     }
 }
 
 impl std::fmt::Display for Attribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let mut fields = vec![];
+
         unsafe {
-            write!(
-                f,
-                "gene_id={};transcript_id={}",
-                String::from_utf8_unchecked(self.gene_id.to_vec()),
-                String::from_utf8_unchecked(self.transcript_id.to_vec()),
-            )?;
-            if !self.gene_name.is_empty() {
-                write!(
-                    f,
-                    ";gene_name={}",
-                    String::from_utf8_unchecked(self.gene_name.to_vec())
-                )?;
+            if !self.id.is_empty() {
+                fields.push(format!(
+                    "ID={}",
+                    String::from_utf8_unchecked(self.id.to_vec())
+                ));
             }
-            if self.exon_number != 0 {
-                write!(f, ";exon_number={}", self.exon_number)?;
+            if !self.name.is_empty() {
+                fields.push(format!(
+                    "Name={}",
+                    String::from_utf8_unchecked(self.name.to_vec())
+                ));
             }
-            if !self.exon_id.is_empty() {
-                write!(
-                    f,
-                    ";exon_id={}",
-                    String::from_utf8_unchecked(self.exon_id.to_vec())
-                )?;
+            if !self.parent.is_empty() {
+                fields.push(format!(
+                    "Parent={}",
+                    String::from_utf8_unchecked(self.parent.to_vec())
+                ));
             }
         }
-        Ok(())
+
+        write!(f, "{}", fields.join(";"))
     }
 }
 
@@ -268,9 +251,9 @@ impl Annotation {
         &self.attribute
     }
 
-    /// Get transcript id
-    pub fn get_transcript_id(&self) -> &[u8] {
-        self.attribute.get_transcript_id()
+    /// Get parent
+    pub fn get_parent(&self) -> &[u8] {
+        self.attribute.get_parent()
     }
 
     #[cfg(test)]
@@ -335,24 +318,23 @@ mod tests {
 
     #[test]
     fn attribute() -> error::Result<()> {
-        let slice =
-            b"gene_id=test.1;transcript_id=test.1;exon_number=33;exon_id=test.1.33;gene_name=TEST";
+        let slice = b"ID=transcript:ENST00000374675;Parent=gene:ENSG00000112473;Name=SLC39A7-201";
 
         let attribute = Attribute::from_u8_slice(slice)?;
-        assert_eq!(attribute.get_gene_name(), b"TEST");
-        assert_eq!(attribute.get_transcript_id(), b"test.1");
-        assert_eq!(attribute.get_exon_number(), 33);
+        assert_eq!(attribute.get_id(), b"transcript:ENST00000374675");
+        assert_eq!(attribute.get_parent(), b"gene:ENSG00000112473");
+        assert_eq!(attribute.get_name(), b"SLC39A7-201");
 
         assert_eq!(
             format!("{}", attribute),
-            "gene_id=test.1;transcript_id=test.1;gene_name=TEST;exon_number=33;exon_id=test.1.33"
+            "ID=transcript:ENST00000374675;Name=SLC39A7-201;Parent=gene:ENSG00000112473"
         );
 
         let slice = b"";
         let attribute = Attribute::from_u8_slice(slice)?;
-        assert_eq!(attribute.get_gene_name(), b"");
-        assert_eq!(attribute.get_transcript_id(), b"");
-        assert_eq!(attribute.get_exon_number(), 0);
+        assert_eq!(attribute.get_id(), b"");
+        assert_eq!(attribute.get_parent(), b"");
+        assert_eq!(attribute.get_name(), b"");
 
         let _result: std::result::Result<(), error::Error> = Err(
             error::Error::AttributeNameNotSupport(String::from_utf8(b"test".to_vec()).unwrap()),
@@ -373,7 +355,7 @@ mod tests {
             ".",
             "+",
             ".",
-            "gene_id=ENST00000473358.1;transcript_id=ENST00000473358.1",
+            "Parent=ENST00000473358.1",
         ];
 
         // Basic test
@@ -386,14 +368,17 @@ mod tests {
         assert_eq!(annotation.get_feature(), b"transcript");
         assert_eq!(annotation.get_strand(), &Strand::Forward);
         assert_eq!(annotation.get_frame(), &Frame::Unknow);
-        assert_eq!(annotation.get_transcript_id(), b"ENST00000473358.1");
+        assert_eq!(annotation.get_parent(), b"ENST00000473358.1");
         assert_eq!(
             annotation.get_attribute(),
             &Attribute::from_u8_slice(record.get(8).unwrap())?
         );
 
         // Format
-        assert_eq!(format!("{}", annotation), "chr1 knownGene transcript 29554 31097 inf + . gene_id=ENST00000473358.1;transcript_id=ENST00000473358.1");
+        assert_eq!(
+            format!("{}", annotation),
+            "chr1 knownGene transcript 29554 31097 inf + . Parent=ENST00000473358.1"
+        );
 
         // Change exon
         let annotation = Annotation::from_annotation(&annotation, b"exon");

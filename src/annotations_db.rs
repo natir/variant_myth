@@ -33,7 +33,14 @@ impl AnnotationsDataBase {
             .from_reader(input);
 
         for result in reader.byte_records() {
-            let annotation = annotation::Annotation::from_byte_record(&result?)?;
+            let annotation = match annotation::Annotation::from_byte_record(&result?) {
+                Ok(annot) => annot,
+                Err(error) => {
+                    log::error!("{}", error);
+                    continue;
+                }
+            };
+
             let seqname = annotation.get_seqname();
             let interval = annotation.get_interval();
 
@@ -62,7 +69,7 @@ impl AnnotationsDataBase {
             iitiiri::Iitii<u64, annotation::Annotation, DOMAIN_NUMBER>,
         > = ahash::AHashMap::with_capacity(intervals_builder.len());
         for (key, values) in intervals_builder.drain() {
-            intervals.insert(key, iitiiri::Iitii::new(values));
+            intervals.insert(key, iitiiri::Iitii::new(values.clone()));
         }
 
         Ok(Self { intervals })
@@ -116,51 +123,69 @@ mod tests {
     /* std use */
 
     /* crate use */
+    use bstr::ByteSlice as _;
 
     use crate::annotation::Annotation;
 
     /* project use */
     use super::*;
-
-    const DATA: &[u8] = b"chr1\tknownGene\ttranscript\t11869\t14409\t.\t+\t.\tgene_id=gene1
-chr1\tknownGene\texon\t11869\t12227\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=1;exon_id=gene1.1
-chr1\tknownGene\texon\t12613\t12721\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=2;exon_id=gene1.2
-chr1\tknownGene\texon\t13221\t14409\t.\t+\t.\tgene_id=gene1;transcript_id=gene1;exon_number=3;exon_id=gene1.3
-chr1\tknownGene\ttranscript\t17369\t17436\t.\t-\t.\tgene_id=gene2;transcript_id=gene2
-chr1\tknownGene\texon\t17369\t17436\t.\t-\t.\tgene_id=gene2;transcript_id=gene2;exon_number=1;exon_id=gene2.1
-chr1\tknownGene\ttranscript\t29554\t31097\t.\t+\t.\tgene_id=gene3;transcript_id=gene3
-chr1\tknownGene\texon\t29554\t30039\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=1;exon_id=gene3.1
-chr1\tknownGene\texon\t30564\t30667\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=2;exon_id=gene3.2
-chr1\tknownGene\texon\t30976\t31097\t.\t+\t.\tgene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3
-chr2\ttest\ttranscript\t50\t200\t.\t-\t.\tgene_id=gene4";
+    use crate::tests::GFF;
 
     #[test]
     fn annotations() -> error::Result<()> {
-        let annotations =
-            AnnotationsDataBase::from_reader(std::io::BufReader::new(Box::new(DATA)), 100)?;
+        let file = GFF.replace(b"{0}", b"chr1");
 
         let b1 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(DATA[..57].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
-        println!("{}", String::from_utf8(DATA[262..363].to_vec()).unwrap());
-        let b2 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(DATA[262..363].to_vec())
+            String::from_utf8(file[..76].to_vec())
                 .unwrap()
                 .split('\t')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>(),
         ))?;
 
-        let truth = vec![&b1, &b2];
-        assert_eq!(annotations.get_annotation(b"chr1", 14000..14001), truth);
+        let b2 = Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(file[77..191].to_vec())
+                .unwrap()
+                .split('\t')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        let b3 = Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(file[192..285].to_vec())
+                .unwrap()
+                .split('\t')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        let b4 = Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(file[286..368].to_vec())
+                .unwrap()
+                .split('\t')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        let mut truth = vec![&b1, &b2, &b3, &b4];
+        truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
+        for annot in &truth {
+            println!("truth: {}", annot);
+        }
+
+        let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(file));
+        let annotations = AnnotationsDataBase::from_reader(std::io::BufReader::new(reader), 100)?;
+
+        let mut result = annotations.get_annotation(b"chr1", 840..841);
+        result.sort_by_key(|a| (a.get_start(), a.get_stop()));
+        for annot in &result {
+            println!("result: {}", annot);
+        }
+        assert_eq!(result, truth);
 
         // seqname not present
         assert_eq!(
-            annotations.get_annotation(b"chrX", 14000..14001),
+            annotations.get_annotation(b"chrX", 2300..2301),
             Vec::<&annotation::Annotation>::new()
         );
 

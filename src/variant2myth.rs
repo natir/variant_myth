@@ -99,7 +99,7 @@ impl<'a> Variant2Myth<'a> {
         for annotation in annotations {
             let key = (
                 annotation.get_source().to_vec(),
-                annotation.get_transcript_id().to_vec(),
+                annotation.get_parent().to_vec(),
             );
 
             transcript2annotations

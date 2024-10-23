@@ -38,6 +38,7 @@ where
     let variant2myth = variant2myth::Variant2Myth::new(annotations, translate, sequences);
 
     for result in vcf_reader {
+        log::info!("work on variant {:?}", result);
         serde_json::to_writer(&mut output, &variant2myth.myth(result?))?;
     }
 
@@ -107,18 +108,27 @@ mod tests {
     /* project use */
     use super::*;
 
-    const _GFF: &[u8] =
-        b"{0}	knownGene	transcript	11869	14409	.	+	.	gene_id=gene1;transcript_id=gene1
-{0}	knownGene	exon	11869	12227	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=1;exon_id=gene1.1
-{0}	knownGene	exon	12613	12721	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=2;exon_id=gene1.2
-{0}	knownGene	exon	13221	14409	.	+	.	gene_id=gene1;transcript_id=gene1;exon_number=3;exon_id=gene1.3
-{0}	knownGene	transcript	17369	17436	.	-	.	gene_id=gene2;transcript_id=gene2
-{0}	knownGene	exon	17369	17436	.	-	.	gene_id=gene2;transcript_id=gene2;exon_number=1;exon_id=gene2.1
-{0}	knownGene	transcript	29544	31107	.	+	.	gene_id=gene3;transcript_id=gene3
-{0}	knownGene	exon	29554	30039	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=1;exon_id=gene3.1
-{0}	knownGene	exon	30564	30667	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=2;exon_id=gene3.2
-{0}	knownGene	exon	30976	31097	.	+	.	gene_id=gene3;transcript_id=gene3;exon_number=3;exon_id=gene3.3
-";
+    pub const GFF: &[u8] =
+        b"{0}	ensembl_havana	gene	445	4439	.	+	.	ID=gene:ENSG00000112473;Name=SLC39A7
+{0}	ensembl_havana	mRNA	826	4439	.	+	.	ID=transcript:ENST00000374675;Parent=gene:ENSG00000112473;Name=SLC39A7-201
+{0}	ensembl_havana	exon	826	938	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00001746858
+{0}	ensembl_havana	five_prime_UTR	826	938	.	+	.	Parent=transcript:ENST00000374675
+{0}	ensembl_havana	five_prime_UTR	1242	1245	.	+	.	Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	1242	1656	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00001732423
+{0}	ensembl_havana	CDS	1246	1656	.	+	0	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	1745	1913	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00003321302
+{0}	ensembl_havana	CDS	1745	1913	.	+	0	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	2072	2125	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00003349240
+{0}	ensembl_havana	CDS	2072	2125	.	+	2	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	2263	2427	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00001700955
+{0}	ensembl_havana	CDS	2263	2427	.	+	2	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	2560	2700	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00003546616
+{0}	ensembl_havana	CDS	2560	2700	.	+	2	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	2910	3106	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00003693188
+{0}	ensembl_havana	CDS	2910	3106	.	+	2	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	CDS	3541	3813	.	+	0	ID=CDS:ENSP00000363807;Parent=transcript:ENST00000374675
+{0}	ensembl_havana	exon	3541	4439	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00003460070
+{0}	ensembl_havana	three_prime_UTR	3814	4439	.	+	.	Parent=transcript:ENST00000374675";
 
     fn _setup() -> error::Result<(
         translate::Translate,
@@ -137,7 +147,7 @@ mod tests {
         // produce gff
         let gff_reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
             std::io::BufReader::new(Box::new(std::io::Cursor::new(
-                _GFF.replace(b"{0}", &fasta_reader[1..11]),
+                GFF.replace(b"{0}", &fasta_reader[1..11]),
             )));
         let annotations_db = annotations_db::AnnotationsDataBase::from_reader(gff_reader, 100)?;
 
