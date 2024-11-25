@@ -9,6 +9,16 @@ use std::io::Read;
 /* project use */
 use crate::error;
 
+fn get_reader(
+    path: &std::path::PathBuf,
+) -> error::Result<Box<dyn std::io::Read + std::marker::Send>> {
+    let file = std::fs::File::open(path)?;
+    let boxed = Box::new(file);
+    let (reader, _compression) = niffler::send::get_reader(boxed)?;
+
+    Ok(reader)
+}
+
 /// A variant annotater.
 #[derive(clap::Parser, std::fmt::Debug)]
 #[clap(
@@ -17,23 +27,12 @@ use crate::error;
     version = "0.1",
     author = "Pierre Marijon <pierre@marijon.fr>"
 )]
+#[command(propagate_version = true)]
 pub struct Command {
     // Specific option
-    /// Variant path
-    #[clap(short = 'i', long = "input")]
-    variant_path: std::path::PathBuf,
-
-    /// Reference genome path
-    #[clap(short = 'r', long = "reference")]
-    reference_path: std::path::PathBuf,
-
-    /// Annotation path
-    #[clap(short = 'a', long = "annotations")]
-    annotations_path: Vec<std::path::PathBuf>,
-
-    /// Translate table path, if not set use human
-    #[clap(short = 't', long = "translate")]
-    translate_path: Option<std::path::PathBuf>,
+    /// Subcommands
+    #[command(subcommand)]
+    pub subcommands: SubCommands,
 
     /// Output path
     #[clap(short = 'o', long = "output")]
@@ -63,57 +62,6 @@ pub struct Command {
 }
 
 impl Command {
-    fn get_reader(
-        path: &std::path::PathBuf,
-    ) -> error::Result<Box<dyn std::io::Read + std::marker::Send>> {
-        let file = std::fs::File::open(path)?;
-        let boxed = Box::new(file);
-        let (reader, _compression) = niffler::send::get_reader(boxed)?;
-
-        Ok(reader)
-    }
-
-    /// Get variant reader
-    pub fn variant(
-        &self,
-    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
-        Command::get_reader(&self.variant_path).map(std::io::BufReader::new)
-    }
-
-    /// Get reference reader
-    pub fn reference(
-        &self,
-    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
-        Command::get_reader(&self.reference_path).map(std::io::BufReader::new)
-    }
-
-    /// Get annotations reader
-    pub fn annotations(
-        &self,
-    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
-        let mut handle: Box<dyn std::io::Read + std::marker::Send> =
-            Box::new(std::io::Cursor::new(vec![]));
-
-        for path in &self.annotations_path {
-            handle = Box::new(handle.chain(Command::get_reader(path)?));
-        }
-
-        Ok(std::io::BufReader::new(handle))
-    }
-
-    /// Get translate reader
-    pub fn translate(
-        &self,
-    ) -> error::Result<Option<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>>> {
-        if let Some(path) = &self.translate_path {
-            Command::get_reader(path)
-                .map(std::io::BufReader::new)
-                .map(Some)
-        } else {
-            Ok(None)
-        }
-    }
-
     /// Get output writer
     pub fn output(
         &self,
@@ -148,5 +96,112 @@ impl Command {
     /// Get timestamp granularity
     pub fn timestamp(&self) -> stderrlog::Timestamp {
         self.ts.unwrap_or(stderrlog::Timestamp::Off)
+    }
+}
+
+/// SubCommands to control how variant_myth work
+#[derive(clap::Subcommand, std::fmt::Debug)]
+pub enum SubCommands {
+    /// Annotate variant with only gene name
+    #[clap(name = "var2gene")]
+    Var2Gene(Var2Gene),
+    /// Annotate variants with all annotation
+    #[clap(name = "var2full")]
+    Var2Full(Var2Full),
+}
+
+/// SubCommand that annotate variant with gene name
+#[derive(clap::Parser, std::fmt::Debug)]
+pub struct Var2Gene {
+    /// Variant path
+    #[clap(short = 'i', long = "input")]
+    variant_path: std::path::PathBuf,
+
+    /// Annotation path
+    #[clap(short = 'a', long = "annotations")]
+    annotations_path: Vec<std::path::PathBuf>,
+}
+
+impl Var2Gene {
+    /// Get variant reader
+    pub fn variant(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        get_reader(&self.variant_path).map(std::io::BufReader::new)
+    }
+
+    /// Get annotations reader
+    pub fn annotations(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        let mut handle: Box<dyn std::io::Read + std::marker::Send> =
+            Box::new(std::io::Cursor::new(vec![]));
+
+        for path in &self.annotations_path {
+            handle = Box::new(handle.chain(get_reader(path)?));
+        }
+
+        Ok(std::io::BufReader::new(handle))
+    }
+}
+
+/// SubCommand that annotate variant with all information
+#[derive(clap::Parser, std::fmt::Debug)]
+pub struct Var2Full {
+    /// Variant path
+    #[clap(short = 'i', long = "input")]
+    variant_path: std::path::PathBuf,
+
+    /// Reference genome path
+    #[clap(short = 'r', long = "reference")]
+    reference_path: std::path::PathBuf,
+
+    /// Annotation path
+    #[clap(short = 'a', long = "annotations")]
+    annotations_path: Vec<std::path::PathBuf>,
+
+    /// Translate table path, if not set use human
+    #[clap(short = 't', long = "translate")]
+    translate_path: Option<std::path::PathBuf>,
+}
+
+impl Var2Full {
+    /// Get variant reader
+    pub fn variant(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        get_reader(&self.variant_path).map(std::io::BufReader::new)
+    }
+
+    /// Get reference reader
+    pub fn reference(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        get_reader(&self.reference_path).map(std::io::BufReader::new)
+    }
+
+    /// Get annotations reader
+    pub fn annotations(
+        &self,
+    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
+        let mut handle: Box<dyn std::io::Read + std::marker::Send> =
+            Box::new(std::io::Cursor::new(vec![]));
+
+        for path in &self.annotations_path {
+            handle = Box::new(handle.chain(get_reader(path)?));
+        }
+
+        Ok(std::io::BufReader::new(handle))
+    }
+
+    /// Get translate reader
+    pub fn translate(
+        &self,
+    ) -> error::Result<Option<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>>> {
+        if let Some(path) = &self.translate_path {
+            get_reader(path).map(std::io::BufReader::new).map(Some)
+        } else {
+            Ok(None)
+        }
     }
 }

@@ -126,6 +126,9 @@ fn run() -> anyhow::Result<()> {
 
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
     cmd.args([
+        "-o",
+        &format!("{}", output_path.display()),
+        "var2full",
         "-i",
         &format!("{}", variant_path.display()),
         "-r",
@@ -134,8 +137,6 @@ fn run() -> anyhow::Result<()> {
         &format!("{}", annotation_path.display()),
         "-t",
         &format!("{}", translate_path.display()),
-        "-o",
-        &format!("{}", output_path.display()),
     ]);
 
     let assert = cmd.assert();
@@ -154,6 +155,11 @@ fn run_threads() -> anyhow::Result<()> {
 
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
     cmd.args([
+        "-o",
+        &format!("{}", output_path.display()),
+        "--threads",
+        "4",
+        "var2full",
         "-i",
         &format!("{}", variant_path.display()),
         "-r",
@@ -162,10 +168,6 @@ fn run_threads() -> anyhow::Result<()> {
         &format!("{}", annotation_path.display()),
         "-t",
         &format!("{}", translate_path.display()),
-        "-o",
-        &format!("{}", output_path.display()),
-        "--threads",
-        "4",
     ]);
 
     let assert = cmd.assert();

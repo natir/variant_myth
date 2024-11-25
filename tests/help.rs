@@ -9,13 +9,14 @@
 #[cfg(not(feature = "parallel"))]
 const HELP: &[u8] = b"A variant annotater
 
-Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --output <OUTPUT_PATH>
+Usage: variant_myth [OPTIONS] --output <OUTPUT_PATH> <COMMAND>
+
+Commands:
+  var2gene  Annotate variant with only gene name
+  var2full  Annotate variants with all annotation
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
-  -i, --input <VARIANT_PATH>               Variant path
-  -r, --reference <REFERENCE_PATH>         Reference genome path
-  -a, --annotations <ANNOTATIONS_PATH>     Annotation path
-  -t, --translate <TRANSLATE_PATH>         Translate table path, if not set use human
   -o, --output <OUTPUT_PATH>               Output path
   -d, --updown-distance <UPDOWN_DISTANCE>  [Up|Down]stream transcript distance, default: 5,000
   -q, --quiet                              Silence all output
@@ -28,17 +29,14 @@ Options:
 #[cfg(feature = "parallel")]
 const HELP: &[u8] = b"A variant annotater
 
-Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --output <OUTPUT_PATH>
+Usage: variant_myth [OPTIONS] --output <OUTPUT_PATH> <COMMAND>
+
+Commands:
+  var2gene  Annotate variant with only gene name
+  var2full  Annotate variants with all annotation
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
-  -i, --input <VARIANT_PATH>
-          Variant path
-  -r, --reference <REFERENCE_PATH>
-          Reference genome path
-  -a, --annotations <ANNOTATIONS_PATH>
-          Annotation path
-  -t, --translate <TRANSLATE_PATH>
-          Translate table path, if not set use human
   -o, --output <OUTPUT_PATH>
           Output path
   -d, --updown-distance <UPDOWN_DISTANCE>
