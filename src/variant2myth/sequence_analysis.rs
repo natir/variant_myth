@@ -101,7 +101,7 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
         let translate = self.translate.translate(&coding);
         let _translate_var = self.translate.translate(&coding_var);
 
-        log::info!("{}", String::from_utf8(translate).unwrap());
+        log::trace!("{}", String::from_utf8(translate).unwrap());
 
         vec![]
     }

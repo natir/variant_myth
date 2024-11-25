@@ -75,7 +75,7 @@ impl Attribute {
                     obj.parent = value.to_vec()
                 }
                 _ => {
-                    log::warn!(
+                    log::trace!(
                         "{:?}",
                         error::Error::AttributeNameNotSupport(unsafe {
                             String::from_utf8_unchecked(attribute.to_vec())

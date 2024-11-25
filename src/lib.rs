@@ -20,34 +20,42 @@ pub mod myth;
 pub mod sequences_db;
 pub mod translate;
 pub mod variant;
-pub mod variant2gene;
 pub mod variant2myth;
 
 #[cfg(not(feature = "parallel"))]
-/// For each variant found matching gene
-pub fn vcf2gene<R, W>(
+/// For each variants found matching annotations
+pub fn vcf2json<R, W>(
     annotations: &annotations_db::AnnotationsDataBase,
+    sequences: &sequences_db::SequencesDataBase,
+    translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
+    no_annotation: bool,
     mut output: W,
 ) -> error::Result<()>
 where
     R: std::io::BufRead,
     W: std::io::Write,
 {
-    let variant2gene = variant2gene::Variant2Gene::new(annotations);
+    let variant2myth =
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
 
     for result in vcf_reader {
-        serde_json::to_writer(&mut output, &variant2gene.gene(result?))?;
+        let variant = result?;
+        log::debug!("work on variant {}", variant);
+        serde_json::to_writer(&mut output, &variant2myth.myth(variant))?;
     }
 
     Ok(())
 }
 
 #[cfg(feature = "parallel")]
-/// For each variant found matching gene
-pub fn vcf2gene<R, W>(
+/// For each variants found matching annotations
+pub fn vcf2json<R, W>(
     annotations: &annotations_db::AnnotationsDataBase,
+    sequences: &sequences_db::SequencesDataBase,
+    translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
+    no_annotation: bool,
     mut output: W,
 ) -> error::Result<()>
 where
@@ -62,74 +70,8 @@ where
             .collect::<Vec<serde_json::Result<()>>>()
     });
 
-    let variant2gene = variant2gene::Variant2Gene::new(annotations);
-
-    let results = vcf_reader
-        .par_bridge()
-        .filter(Result::is_ok)
-        .map(error::Result::unwrap)
-        .map(|variant| tx.send(variant2gene.gene(variant)))
-        .collect::<Vec<core::result::Result<(), std::sync::mpsc::SendError<variant2gene::GeneMyth>>>>();
-
-    for result in results {
-        result?
-    }
-
-    drop(tx);
-
-    let results = write_thread.join().unwrap();
-    for result in results {
-        result?
-    }
-
-    Ok(())
-}
-
-#[cfg(not(feature = "parallel"))]
-/// For each variants found matching annotations
-pub fn vcf2json<R, W>(
-    annotations: &annotations_db::AnnotationsDataBase,
-    sequences: &sequences_db::SequencesDataBase,
-    translate: &translate::Translate,
-    vcf_reader: variant::VcfReader<R>,
-    mut output: W,
-) -> error::Result<()>
-where
-    R: std::io::BufRead,
-    W: std::io::Write,
-{
-    let variant2myth = variant2myth::Variant2Myth::new(annotations, translate, sequences);
-
-    for result in vcf_reader {
-        log::info!("work on variant {:?}", result);
-        serde_json::to_writer(&mut output, &variant2myth.myth(result?))?;
-    }
-
-    Ok(())
-}
-
-#[cfg(feature = "parallel")]
-/// For each variants found matching annotations
-pub fn vcf2json<R, W>(
-    annotations: &annotations_db::AnnotationsDataBase,
-    sequences: &sequences_db::SequencesDataBase,
-    translate: &translate::Translate,
-    vcf_reader: variant::VcfReader<R>,
-    mut output: W,
-) -> error::Result<()>
-where
-    R: std::io::BufRead + std::marker::Send,
-    W: std::io::Write + std::marker::Send + 'static,
-{
-    let (tx, rx) = std::sync::mpsc::channel();
-
-    let write_thread = std::thread::spawn(move || {
-        rx.iter()
-            .map(|message| serde_json::to_writer(&mut output, &message))
-            .collect::<Vec<serde_json::Result<()>>>()
-    });
-
-    let variant2myth = variant2myth::Variant2Myth::new(annotations, translate, sequences);
+    let variant2myth =
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
 
     let results = vcf_reader
         .par_bridge()

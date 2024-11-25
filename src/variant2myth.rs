@@ -3,6 +3,7 @@
 /* std use */
 
 /* crate use */
+use bstr::ByteSlice as _;
 
 /* module declaration */
 mod feature_presence;
@@ -37,8 +38,9 @@ impl<'a> Variant2Myth<'a> {
         annotations: &'a annotations_db::AnnotationsDataBase,
         translate: &'a translate::Translate,
         sequences: &'a sequences_db::SequencesDataBase,
+        no_annotators: bool,
     ) -> Self {
-        let annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>> = vec![
+        let mut annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>> = vec![
             Box::new(feature_presence::FeaturePresence::new(
                 b"upstream",
                 effect::Effect::UpstreamGeneVariant,
@@ -59,6 +61,10 @@ impl<'a> Variant2Myth<'a> {
                 translate, sequences,
             )),
         ];
+
+        if no_annotators {
+            annotators.clear()
+        }
 
         Self {
             annotations,
@@ -113,6 +119,15 @@ impl<'a> Variant2Myth<'a> {
                 .source(key.0)
                 .transcript_id(key.1)
                 .effects(vec![]);
+
+            transcript_myth = transcript_myth.gene_name(
+                annotations
+                    .iter()
+                    .filter(|a| a.get_feature().contains_str("gene"))
+                    .map(|a| a.get_attribute().get_name())
+                    .collect::<Vec<&[u8]>>()
+                    .join(&b';'),
+            );
 
             for annotator in &self.annotators[..] {
                 transcript_myth.extend_effect(&annotator.annotate(&annotations, &variant))

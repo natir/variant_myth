@@ -72,6 +72,19 @@ impl std::fmt::Debug for Variant {
     }
 }
 
+impl std::fmt::Display for Variant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{}-{}-{}-{}",
+            String::from_utf8(self.seqname.to_vec()).unwrap(),
+            self.position,
+            String::from_utf8(self.ref_seq.to_vec()).unwrap(),
+            String::from_utf8(self.alt_seq.to_vec()).unwrap()
+        )
+    }
+}
+
 /// Struct to generate Variant iterator from vcf
 pub struct VcfReader<R>
 where

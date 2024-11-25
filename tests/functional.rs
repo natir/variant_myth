@@ -128,7 +128,6 @@ fn run() -> anyhow::Result<()> {
     cmd.args([
         "-o",
         &format!("{}", output_path.display()),
-        "var2full",
         "-i",
         &format!("{}", variant_path.display()),
         "-r",
@@ -159,7 +158,6 @@ fn run_threads() -> anyhow::Result<()> {
         &format!("{}", output_path.display()),
         "--threads",
         "4",
-        "var2full",
         "-i",
         &format!("{}", variant_path.display()),
         "-r",
