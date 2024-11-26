@@ -124,7 +124,7 @@ impl<'a> Variant2Myth<'a> {
                 annotations
                     .iter()
                     .filter(|a| a.get_feature().contains_str("gene"))
-                    .map(|a| a.get_attribute().get_name())
+                    .map(|a| a.get_attribute().get_id())
                     .collect::<Vec<&[u8]>>()
                     .join(&b';'),
             );
