@@ -26,7 +26,7 @@ path = "src/main.rs"
 # Specific
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
-iitiiri        = { git = "https://github.com/natir/iitiiri.git" }
+clairiere      = { git = "https://github.com/natir/clairiere.git" }
 
 # Other
 derive_builder   = { version = "0.20" }
@@ -45,8 +45,8 @@ serde_json     = { version = "1" }
 clap           = { version = "4", features = ["derive"] }
 
 # Error management
-thiserror      = { version = "1" }
-anyhow         = { version = "1"}
+thiserror      = { version = "2" }
+anyhow         = { version = "1" }
 
 # Logging and error management
 log            = { version = "0.4" }
@@ -65,7 +65,7 @@ tempfile       = { version = "3" }
 
 [features]
 default = []
-parallel = ["dep:rayon", "iitiiri/parallel"]
+parallel = ["dep:rayon", "clairiere/parallel"]
 bench = []
 
 
