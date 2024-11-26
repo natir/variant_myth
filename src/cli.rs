@@ -119,7 +119,7 @@ impl Command {
     /// Get output writer
     pub fn output(
         &self,
-    ) -> error::Result<std::io::BufWriter<Box<dyn std::io::Write + std::marker::Send>>> {
+    ) -> error::Result<std::io::BufWriter<Box<dyn crate::WriteSeek + std::marker::Send>>> {
         let file = std::fs::File::create(&self.output_path)?;
         let boxed = Box::new(file);
 

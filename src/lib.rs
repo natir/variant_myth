@@ -22,6 +22,10 @@ pub mod translate;
 pub mod variant;
 pub mod variant2myth;
 
+/// Just a trait to combine Write and Seek trait
+pub trait WriteSeek: std::io::Write + std::io::Seek {}
+impl<T> WriteSeek for T where T: std::io::Write + std::io::Seek {}
+
 #[cfg(not(feature = "parallel"))]
 /// For each variants found matching annotations
 pub fn vcf2json<R, W>(
@@ -34,16 +38,20 @@ pub fn vcf2json<R, W>(
 ) -> error::Result<()>
 where
     R: std::io::BufRead,
-    W: std::io::Write,
+    W: std::io::Write + std::io::Seek,
 {
     let variant2myth =
         variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
 
+    output.write_all(b"[")?;
     for result in vcf_reader {
         let variant = result?;
         log::debug!("work on variant {}", variant);
         serde_json::to_writer(&mut output, &variant2myth.myth(variant))?;
+        output.write_all(b",")?;
     }
+    output.seek_relative(-1)?;
+    output.write_all(b"]")?;
 
     Ok(())
 }
@@ -60,14 +68,30 @@ pub fn vcf2json<R, W>(
 ) -> error::Result<()>
 where
     R: std::io::BufRead + std::marker::Send,
-    W: std::io::Write + std::marker::Send + 'static,
+    W: std::io::Write + std::io::Seek + std::marker::Send + 'static,
 {
     let (tx, rx) = std::sync::mpsc::channel();
 
     let write_thread = std::thread::spawn(move || {
-        rx.iter()
-            .map(|message| serde_json::to_writer(&mut output, &message))
-            .collect::<Vec<serde_json::Result<()>>>()
+        let mut results: Vec<anyhow::Result<()>> = Vec::new();
+
+        results.push(output.write_all(b"[").map_err(|e| anyhow::Error::new(e)));
+        results.extend(
+            rx.iter()
+                .map(|message| {
+                    let result = serde_json::to_writer(&mut output, &message)
+                        .map_err(|e| anyhow::Error::new(e));
+                    [
+                        result,
+                        output.write_all(b",").map_err(|e| anyhow::Error::new(e)),
+                    ]
+                })
+                .flatten(),
+        );
+        results.push(output.seek_relative(-1).map_err(|e| anyhow::Error::new(e)));
+        results.push(output.write_all(b"]").map_err(|e| anyhow::Error::new(e)));
+
+        results
     });
 
     let variant2myth =
