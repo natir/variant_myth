@@ -47,7 +47,10 @@ where
     for result in vcf_reader {
         let variant = result?;
         log::debug!("work on variant {}", variant);
-        serde_json::to_writer(&mut output, &variant2myth.myth(variant))?;
+
+        let myth = variant2myth.myth(variant);
+
+        serde_json::to_writer(&mut output, &myth)?;
         output.write_all(b",")?;
     }
     output.seek_relative(-1)?;

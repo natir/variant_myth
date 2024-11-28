@@ -30,6 +30,7 @@ trait Annotator {
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
     annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>,
+    no_annotators: bool,
 }
 
 impl<'a> Variant2Myth<'a> {
@@ -69,6 +70,7 @@ impl<'a> Variant2Myth<'a> {
         Self {
             annotations,
             annotators,
+            no_annotators,
         }
     }
 
@@ -120,14 +122,17 @@ impl<'a> Variant2Myth<'a> {
                 .transcript_id(key.1)
                 .effects(vec![]);
 
-            transcript_myth = transcript_myth.gene_name(
-                annotations
-                    .iter()
-                    .filter(|a| a.get_feature().contains_str("gene"))
-                    .map(|a| a.get_attribute().get_id())
-                    .collect::<Vec<&[u8]>>()
-                    .join(&b';'),
-            );
+            let gene_name = annotations
+                .iter()
+                .filter(|a| a.get_feature().contains_str("gene"))
+                .map(|a| a.get_attribute().get_id())
+                .collect::<Vec<&[u8]>>()
+                .join(&b';');
+
+            if self.no_annotators && gene_name.is_empty() {
+                continue;
+            }
+            transcript_myth = transcript_myth.gene_name(gene_name);
 
             for annotator in &self.annotators[..] {
                 transcript_myth.extend_effect(&annotator.annotate(&annotations, &variant))
