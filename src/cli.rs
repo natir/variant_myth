@@ -45,6 +45,7 @@ pub struct Command {
     /// Translate table path, if not set use human
     #[clap(short = 't', long = "translate")]
     translate_path: Option<std::path::PathBuf>,
+
     /// Output path
     #[clap(short = 'o', long = "output")]
     output_path: std::path::PathBuf,

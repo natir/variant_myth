@@ -9,28 +9,25 @@ use crate::effect;
 use crate::variant;
 
 /// Struct to store annotation information
-#[derive(Debug, serde::Serialize, derive_builder::Builder, Clone, PartialEq)]
+#[derive(Debug, derive_builder::Builder, Clone, PartialEq)]
 #[builder(pattern = "owned")]
 pub struct AnnotationMyth {
-    #[serde(serialize_with = "crate::serialize_bstr")]
     /// Source of annotation
     pub source: Vec<u8>,
 
-    #[serde(serialize_with = "crate::serialize_bstr")]
     /// Transcript id
     pub transcript_id: Vec<u8>,
 
-    #[serde(serialize_with = "crate::serialize_bstr")]
     #[builder(default)]
     /// Gene name
     pub gene_name: Vec<u8>,
 
     /// Store effect of this variants
-    effects: Vec<effect::Effect>,
+    pub effects: Vec<effect::Effect>,
 
     #[builder(private, default)]
     /// Store impact of effect
-    impact: effect::Impact,
+    pub impact: effect::Impact,
 }
 
 impl AnnotationMyth {
@@ -68,10 +65,10 @@ impl AnnotationMythBuilder {
 }
 
 /// Store information around variant
-#[derive(Debug, serde::Serialize, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Myth {
-    variant: variant::Variant,
-    annotations: Vec<AnnotationMyth>,
+    pub variant: variant::Variant,
+    pub annotations: Vec<AnnotationMyth>,
 }
 
 impl Myth {
@@ -189,30 +186,5 @@ mod tests {
                 }]
             }
         );
-    }
-
-    #[test]
-    fn json_serde() -> crate::error::Result<()> {
-        let mut annotation = AnnotationMyth::builder()
-            .source(b"test".to_vec())
-            .transcript_id(b"gene1".to_vec());
-
-        annotation.add_effect(effect::Effect::GeneVariant);
-        annotation.add_effect(effect::Effect::ExonRegion);
-
-        let mut myth = Myth::from_variant(variant::Variant {
-            seqname: b"93".to_vec(),
-            position: 2036067340,
-            ref_seq: b"T".to_vec(),
-            alt_seq: b".".to_vec(),
-        });
-
-        myth.add_annotation(annotation.build().unwrap());
-
-        let mut json = vec![];
-        serde_json::to_writer(&mut json, &myth)?;
-        assert_eq!(json, b"{\"variant\":{\"seqname\":\"93\",\"position\":2036067340,\"ref_seq\":\"T\",\"alt_seq\":\".\"},\"annotations\":[{\"source\":\"test\",\"transcript_id\":\"gene1\",\"gene_name\":\"\",\"effects\":[\"GeneVariant\",\"ExonRegion\"],\"impact\":\"Modifier\"}]}");
-
-        Ok(())
     }
 }
