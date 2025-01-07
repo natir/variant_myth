@@ -153,6 +153,18 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn codon_break() -> error::Result<()> {
+        let trans = Translate::default();
+
+        assert_eq!(trans.translate(b"TAA"), b"*".to_vec());
+        assert_eq!(trans.translate(b"TTTA"), b"F".to_vec());
+        assert_eq!(trans.translate(b"TTTAA"), b"F".to_vec());
+        assert_eq!(trans.translate(b"TTTAAA"), b"FK".to_vec());
+
+        Ok(())
+    }
+
+    #[test]
     fn translate() -> error::Result<()> {
         let trans = Translate::from_reader(std::io::BufReader::new(Box::new(STANDARD)))?;
 

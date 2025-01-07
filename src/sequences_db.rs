@@ -247,6 +247,8 @@ mod tests {
     /* crate use */
     use biotest::Format as _;
 
+    use crate::translate::Translate;
+
     /* project use */
     use super::*;
 
@@ -611,5 +613,87 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn not_random() {
+        let mut seq_file: Vec<u8> = Vec::new();
+
+        seq_file.extend(b">hbb\n");
+        seq_file.extend(b"
+ttcgtctagATGACCGCCATGCAAAGGCTCACTGGGctctcttcacccCTTAAGCATCTACGTATGCGGgatcgcaggcctctctcggtgTGTCGTCGGTCGAGGGTTTAAATGatcctgcttggccaa");
+
+        let seqdb = SequencesDataBase::from_reader(std::io::BufReader::new(Box::new(
+            std::io::Cursor::new(seq_file),
+        )
+            as Box<dyn std::io::Read + Send>))
+        .unwrap();
+
+        let annotations = vec![
+            annotation::Annotation::test_annotation(b"hbb".to_vec(), 10, 37),
+            annotation::Annotation::test_annotation(b"hbb".to_vec(), 49, 70),
+            annotation::Annotation::test_annotation(b"hbb".to_vec(), 91, 115),
+        ];
+
+        assert_eq!(
+            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAAATG".to_vec(),
+            seqdb
+                .epissed(
+                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                    annotation::Strand::Forward
+                )
+                .unwrap()
+        );
+
+        assert_eq!(
+            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAAATG".to_vec(),
+            seqdb
+                .coding(
+                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                    annotation::Strand::Forward,
+                    None,
+                    None,
+                )
+                .unwrap()
+        );
+
+        assert_eq!(
+            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAAATG".to_vec(),
+            seqdb
+                .coding(
+                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                    annotation::Strand::Forward,
+                    Some(19),
+                    None,
+                )
+                .unwrap()
+        );
+
+        assert_eq!(
+            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
+            seqdb
+                .coding(
+                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                    annotation::Strand::Forward,
+                    Some(19),
+                    Some(112),
+                )
+                .unwrap()
+        );
+
+        let translate = Translate::default();
+        assert_eq!(
+            b"MQRLTGLKHLRMRCRRSRV*".to_vec(),
+            translate.translate(
+                &seqdb
+                    .coding(
+                        &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                        annotation::Strand::Forward,
+                        Some(19),
+                        Some(112),
+                    )
+                    .unwrap()
+            )
+        );
     }
 }
