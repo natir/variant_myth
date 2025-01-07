@@ -33,7 +33,7 @@ impl Variant {
                     record.get(1).ok_or(error::Error::VcfBadRecord)?.to_vec(),
                 )
                 .parse::<u64>()?
-            },
+            } - 1,
             ref_seq: record.get(3).ok_or(error::Error::VcfBadRecord)?.to_vec(),
             alt_seq: record.get(4).ok_or(error::Error::VcfBadRecord)?.to_vec(),
         })
@@ -151,49 +151,49 @@ mod tests {
             vec![
                 Variant {
                     seqname: b"YAR028W".to_vec(),
-                    position: 509242864,
+                    position: 509242863,
                     ref_seq: b"A".to_vec(),
                     alt_seq: b".".to_vec(),
                 },
                 Variant {
                     seqname: b"93".to_vec(),
-                    position: 2036067340,
+                    position: 2036067339,
                     ref_seq: b"T".to_vec(),
                     alt_seq: b".".to_vec()
                 },
                 Variant {
                     seqname: b"X".to_vec(),
-                    position: 2138516245,
+                    position: 2138516244,
                     ref_seq: b"A".to_vec(),
                     alt_seq: b".".to_vec()
                 },
                 Variant {
                     seqname: b"NC_000015.10".to_vec(),
-                    position: 1204106469,
+                    position: 1204106468,
                     ref_seq: b"c".to_vec(),
                     alt_seq: b".".to_vec()
                 },
                 Variant {
                     seqname: b"NC_016845.1".to_vec(),
-                    position: 1745241132,
+                    position: 1745241131,
                     ref_seq: b"c".to_vec(),
                     alt_seq: b".".to_vec()
                 }
             ]
         );
 
-        assert_eq!(records[1].get_interval(), (2036067340u64..2036067341u64));
+        assert_eq!(records[1].get_interval(), (2036067339u64..2036067340u64));
 
-        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516245, ref_seq: b\"A\".to_vec(), alt_seq: b\".\".to_vec }".to_string());
+        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516244, ref_seq: b\"A\".to_vec(), alt_seq: b\".\".to_vec }".to_string());
         Ok(())
     }
 
     #[test]
     fn test_variant() {
-        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"A");
+        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"A"); // 0-based
 
         assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103);
+        assert_eq!(variant.position, 62103); // 0-based
         assert_eq!(variant.ref_seq, b"ACT");
         assert_eq!(variant.alt_seq, b"A");
     }
