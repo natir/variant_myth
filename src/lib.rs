@@ -23,6 +23,8 @@ pub mod translate;
 pub mod variant;
 pub mod variant2myth;
 
+use crate::output::writer::MythWriter;
+
 /// Just a trait to combine Write and Seek trait
 pub trait WriteSeek: std::io::Write + std::io::Seek {}
 impl<T> WriteSeek for T where T: std::io::Write + std::io::Seek {}
@@ -44,7 +46,7 @@ where
     let variant2myth =
         variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
 
-    let schema = std::sync::Arc::new(output::schema());
+    let schema = std::sync::Arc::new(output::parquet::schema());
     let mut writer = parquet::arrow::arrow_writer::ArrowWriter::try_new(
         &mut output,
         schema.clone(),
@@ -112,6 +114,45 @@ where
         )?;
 
         writer.write(&batch)?;
+    }
+
+    writer.close()?;
+    Ok(())
+}
+
+#[cfg(not(feature = "parallel"))]
+/// For each variants found matching annotations
+pub fn annotate<R>(
+    annotations: &annotations_db::AnnotationsDataBase,
+    sequences: &sequences_db::SequencesDataBase,
+    translate: &translate::Translate,
+    mut vcf_reader: variant::VcfReader<R>,
+    no_annotation: bool,
+    block_size: usize,
+    mut writer: impl MythWriter,
+) -> error::Result<()>
+where
+    R: std::io::BufRead,
+{
+    let variant2myth =
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
+
+    let mut end = true;
+    while end {
+        for _ in 0..block_size {
+            if let Some(result) = vcf_reader.next() {
+                let variant = result?;
+
+                let myth = variant2myth.myth(variant);
+
+                writer.write_myth(myth)?;
+            } else {
+                end = false;
+                break;
+            }
+        }
+
+        writer.end_batch()?;
     }
 
     writer.close()?;
