@@ -37,7 +37,7 @@ rayon          = { version = "1", optional = true }
 # Input Output management
 csv            = { version = "1" }
 niffler        = { version = "2", features = ["bzip2", "lzma", "gz", "bgz"] }
-noodles        = { version = "0.78", features = ["fasta"] }
+noodles        = { version = "0.87", features = ["fasta"] }
 arrow          = { version = "53" }
 parquet        = { version = "53" }
 

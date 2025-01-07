@@ -9,3 +9,5 @@ variant_myth -i variants.vcf -r reference.fasta -a annotations.gff \
 All input could be compress in gzip, bzip2, bgzip or xz format.
 
 If you install variant_myth with `parallel` feature you can add `--threads` option.
+
+You could run `get_data.sh` to download some example data in `data` directory.

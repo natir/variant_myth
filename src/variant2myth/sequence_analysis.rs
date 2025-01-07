@@ -87,9 +87,9 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
         let coding_var = match self.sequences.coding_edit(
             annotations,
             *strand,
+            variant,
             start_position,
             stop_position,
-            variant,
         ) {
             Ok(sequence) => sequence,
             Err(error) => {
