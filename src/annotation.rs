@@ -74,14 +74,7 @@ impl Attribute {
                 [b'P', b'a', b'r', b'e', b'n', b't', b'=', value @ ..] => {
                     obj.parent = value.to_vec()
                 }
-                _ => {
-                    log::trace!(
-                        "{:?}",
-                        error::Error::AttributeNameNotSupport(unsafe {
-                            String::from_utf8_unchecked(attribute.to_vec())
-                        })
-                    );
-                }
+                _ => {}
             }
         }
 

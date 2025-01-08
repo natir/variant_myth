@@ -86,6 +86,9 @@ impl<'a> Variant2Myth<'a> {
             .annotations
             .get_annotation(&variant.seqname, variant.get_interval());
 
+        // log::debug!("{:?}", variant);
+        // log::debug!("{:?}", annotations);
+
         if annotations.is_empty() {
             myth.add_annotation(
                 myth::AnnotationMyth::builder()

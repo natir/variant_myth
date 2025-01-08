@@ -45,7 +45,7 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
             .find(|&&x| x.get_feature() == b"stop_codon")
             .map(|x| x.get_stop());
 
-        let _exon_annot = annotations
+        let exon_annot = annotations
             .iter()
             .filter(|a| a.get_feature() == b"exon")
             .cloned()
@@ -75,7 +75,7 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
         let coding =
             match self
                 .sequences
-                .coding(annotations, *strand, start_position, stop_position)
+                .coding(&exon_annot, *strand, start_position, stop_position)
             {
                 Ok(sequence) => sequence,
                 Err(error) => {
@@ -85,7 +85,7 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
             };
 
         let coding_var = match self.sequences.coding_edit(
-            annotations,
+            &exon_annot,
             *strand,
             variant,
             start_position,
@@ -99,9 +99,17 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
         };
 
         let translate = self.translate.translate(&coding);
-        let _translate_var = self.translate.translate(&coding_var);
+        let translate_var = self.translate.translate(&coding_var);
 
-        log::trace!("{}", String::from_utf8(translate).unwrap());
+        // if translate != translate_var {
+        //     log::debug!("ORIGINAL: {}", String::from_utf8(translate).unwrap());
+        //     log::debug!("EDIT    : {}", String::from_utf8(translate_var).unwrap());
+        //     log::debug!("VARIANT : {}", variant);
+        //     log::debug!(
+        //         "ID      : {}",
+        //         String::from_utf8(annotations[0].get_attribute().get_id().to_vec()).unwrap()
+        //     );
+        // }
 
         vec![]
     }

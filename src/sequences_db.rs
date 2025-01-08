@@ -109,7 +109,12 @@ impl SequencesDataBase {
 
                 edit.extend(&epissed[..pos_in_epissed as usize]);
                 edit.extend(variant.alt_seq.to_vec());
-                edit.extend(&epissed[(pos_in_epissed as usize + variant.ref_seq.len())..]);
+                edit.extend(
+                    &epissed[std::cmp::min(
+                        pos_in_epissed as usize + variant.ref_seq.len(),
+                        epissed.len(),
+                    )..],
+                );
                 break;
             }
         }
@@ -147,7 +152,8 @@ impl SequencesDataBase {
                 u64::MAX
             };
 
-            let (coding, _) = self.coding_internal(seqname, annotations, start, stop, u64::MAX)?;
+            let (coding, _, _) =
+                self.coding_internal(seqname, annotations, start, stop, u64::MAX)?;
 
             Self::coding_end(coding, strand)
         } else {
@@ -182,13 +188,17 @@ impl SequencesDataBase {
                 u64::MAX
             };
 
-            let (coding, variant_pos) =
+            let (coding, variant_pos, change) =
                 self.coding_internal(seqname, annotations, start, stop, variant.position)?;
-
-            if variant_pos != variant.position {
+            if change {
                 let mut edit = coding[..variant_pos as usize].to_vec();
                 edit.extend(&variant.alt_seq);
-                edit.extend(&coding[variant_pos as usize + variant.ref_seq.len()..]);
+                edit.extend(
+                    &coding[std::cmp::min(
+                        variant_pos as usize + variant.ref_seq.len(),
+                        coding.len(),
+                    )..],
+                );
 
                 Self::coding_end(edit, strand)
             } else {
@@ -206,8 +216,9 @@ impl SequencesDataBase {
         start: u64,
         stop: u64,
         mut variant_pos: u64,
-    ) -> error::Result<(Vec<u8>, u64)> {
+    ) -> error::Result<(Vec<u8>, u64, bool)> {
         let mut result = Vec::new();
+        let mut in_coding = false;
         for annotation in annotations {
             if annotation.get_stop() < start {
                 // before start skip
@@ -221,6 +232,7 @@ impl SequencesDataBase {
                 result.extend(self.get_interval(seqname, &(start..stop))?);
                 if start < variant_pos && stop > variant_pos {
                     variant_pos -= start;
+                    in_coding = true;
                 }
                 break;
             } else if start < annotation.get_stop() && start > annotation.get_start() {
@@ -228,21 +240,27 @@ impl SequencesDataBase {
                 result.extend(self.get_interval(seqname, &(start..annotation.get_stop()))?);
                 if start < variant_pos && annotation.get_stop() > variant_pos {
                     variant_pos -= start;
+                    in_coding = true;
                 }
             } else if stop < annotation.get_stop() && stop > annotation.get_start() {
                 // stop exon
                 result.extend(self.get_interval(seqname, &(annotation.get_start()..stop))?);
                 if annotation.get_start() < variant_pos && stop > variant_pos {
                     variant_pos -= annotation.get_start();
+                    in_coding = true;
                 }
                 break;
             } else {
                 // all other case
-                result.extend(self.get_interval(seqname, &annotation.get_interval())?)
+                result.extend(self.get_interval(seqname, &annotation.get_interval())?);
+                if annotation.get_start() < variant_pos && stop > variant_pos {
+                    variant_pos -= annotation.get_start();
+                    in_coding = true;
+                }
             }
         }
 
-        Ok((result, variant_pos))
+        Ok((result, variant_pos, in_coding))
     }
 
     fn coding_end(mut sequence: Vec<u8>, strand: annotation::Strand) -> error::Result<Vec<u8>> {
@@ -498,7 +516,7 @@ mod tests {
             )?
         );
 
-        let reverse_before = variant::Variant::test_variant(b"sequence", 113, b"A", b"g");
+        let reverse_before = variant::Variant::test_variant(b"sequence", 114, b"A", b"g");
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
@@ -531,6 +549,38 @@ mod tests {
                 &reverse_before,
                 start_reverse,
                 stop_reverse,
+            )?
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn single_exon() -> error::Result<()> {
+        let seqdb = seqdb_setup()?;
+
+        let annotations = annotation_setup();
+
+        assert_eq!(
+            b"ATGACCGCCATGCAAAGGCTCACTGGG".to_vec(),
+            seqdb.coding(
+                &[&annotations[0]],
+                annotation::Strand::Forward,
+                //&forward_in,
+                None,
+                None,
+            )?
+        );
+
+        let variant = variant::Variant::test_variant(b"sequence", 23, b"A", b"t");
+        assert_eq!(
+            b"ATGACCGCCATGCAtAGGCTCACTGGG".to_vec(),
+            seqdb.coding_edit(
+                &[&annotations[0]],
+                annotation::Strand::Forward,
+                &variant,
+                None,
+                None,
             )?
         );
 
