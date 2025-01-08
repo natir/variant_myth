@@ -1,7 +1,9 @@
+//! The JSON writer module. Provides implementation for writing [`Myth`] objects to JSON.
 use crate::error::Result;
 use crate::output::writer::MythWriter;
 use serde_json::Serializer;
 
+/// This is the JSON Writer struct
 pub struct JsonWriter<W> {
     serializer: Serializer<W>,
 }
@@ -15,13 +17,16 @@ impl<W: std::io::Write> JsonWriter<W> {
 }
 
 impl<W: std::io::Write> MythWriter for JsonWriter<W> {
-    fn write_myth(&mut self, myth: crate::myth::Myth) -> crate::error::Result<()> {
+    fn add_myth(&mut self, myth: crate::myth::Myth) -> Result<()> {
         Ok(())
     }
-    fn end_batch(&mut self) -> crate::error::Result<()> {
+    fn batch_full(&self) -> bool {
+        true
+    }
+    fn close(&mut self) -> Result<()> {
         Ok(())
     }
-    fn close(self) -> crate::error::Result<()> {
+    fn write_batch(&mut self) -> Result<()> {
         Ok(())
     }
 }

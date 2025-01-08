@@ -6,7 +6,7 @@
 
 /* project use */
 
-use crate::error::Result;
+use crate::error::{self, Result};
 use crate::myth::Myth;
 use std::io::Write;
 use std::marker::Send;
@@ -34,7 +34,7 @@ pub fn schema() -> arrow::datatypes::Schema {
 }
 
 pub struct ParquetWriter<W: Write + std::marker::Send + std::io::Seek + 'static> {
-    writer: parquet::arrow::arrow_writer::ArrowWriter<W>,
+    writer: Option<parquet::arrow::arrow_writer::ArrowWriter<W>>,
     schema: std::sync::Arc<arrow::datatypes::Schema>,
     chrs: Vec<String>,
     poss: Vec<u64>,
@@ -56,7 +56,7 @@ impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
             Default::default(),
         )?;
         Ok(ParquetWriter {
-            writer,
+            writer: Some(writer),
             schema,
             chrs: Vec::with_capacity(block_size),
             poss: Vec::with_capacity(block_size),
@@ -72,7 +72,7 @@ impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
 }
 
 impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> {
-    fn write_myth(&mut self, myth: Myth) -> Result<()> {
+    fn add_myth(&mut self, myth: Myth) -> Result<()> {
         for annotation in myth.annotations {
             self.chrs
                 .push(unsafe { String::from_utf8_unchecked(myth.variant.seqname.clone()) });
@@ -99,7 +99,18 @@ impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> 
         }
         Ok(())
     }
-    fn end_batch(&mut self) -> Result<()> {
+
+    fn batch_full(&self) -> bool {
+        self.chrs.len() == self.chrs.capacity()
+    }
+    fn close(&mut self) -> Result<()> {
+        // This invalidates the writer, making it the None variant
+        if let Some(writer) = self.writer.take() {
+            writer.close()?;
+        }
+        Ok(())
+    }
+    fn write_batch(&mut self) -> Result<()> {
         let batch = arrow::record_batch::RecordBatch::try_new(
             self.schema.clone(),
             vec![
@@ -133,11 +144,11 @@ impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> 
             ],
         )?;
 
-        self.writer.write(&batch)?;
-        Ok(())
-    }
-    fn close(self) -> Result<()> {
-        self.writer.close()?;
+        if let Some(writer) = self.writer.as_mut() {
+            writer.write(&batch)?;
+        } else {
+            todo!("self.writer is None! Are you trying to write after call to close()?")
+        }
         Ok(())
     }
 }

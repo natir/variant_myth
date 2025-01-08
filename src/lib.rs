@@ -129,7 +129,7 @@ pub fn annotate<R>(
     mut vcf_reader: variant::VcfReader<R>,
     no_annotation: bool,
     block_size: usize,
-    mut writer: impl MythWriter,
+    writer: &mut dyn MythWriter,
 ) -> error::Result<()>
 where
     R: std::io::BufRead,
@@ -151,11 +151,9 @@ where
                 break;
             }
         }
-
-        writer.end_batch()?;
     }
+    writer.finalize()?;
 
-    writer.close()?;
     Ok(())
 }
 
