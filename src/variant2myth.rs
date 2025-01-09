@@ -86,9 +86,6 @@ impl<'a> Variant2Myth<'a> {
             .annotations
             .get_annotation(&variant.seqname, variant.get_interval());
 
-        // log::debug!("{:?}", variant);
-        // log::debug!("{:?}", annotations);
-
         if annotations.is_empty() {
             myth.add_annotation(
                 myth::AnnotationMyth::builder()
@@ -128,10 +125,6 @@ impl<'a> Variant2Myth<'a> {
         }
 
         for (key, annotations) in transcript2annotations {
-            for annotation in &annotations {
-                log::debug!("{}", annotation);
-            }
-
             let mut transcript_myth = myth::AnnotationMyth::builder()
                 .source(key.0)
                 .transcript_id(key.1)

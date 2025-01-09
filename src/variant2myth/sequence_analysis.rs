@@ -56,21 +56,10 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
             .map(|x| x.get_strand())
             .unwrap_or(&annotation::Strand::Forward);
 
-        let _epissed = match self.sequences.epissed(annotations, *strand) {
-            Ok(sequence) => sequence,
-            Err(error) => {
-                log::error!("{:?}", error);
-                return vec![];
-            }
-        };
-
-        let _epissed_var = match self.sequences.epissed_edit(annotations, *strand, variant) {
-            Ok(sequence) => sequence,
-            Err(error) => {
-                log::error!("{:?}", error);
-                return vec![];
-            }
-        };
+        // No exon in associate annotation no sequence analysis
+        if exon_annot.is_empty() {
+            return vec![];
+        }
 
         let coding =
             match self
@@ -98,18 +87,23 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
             }
         };
 
+        // Coding sequence not change variant haven't impact
+        if coding == coding_var {
+            return vec![];
+        }
+
         let translate = self.translate.translate(&coding);
         let translate_var = self.translate.translate(&coding_var);
 
-        // if translate != translate_var {
-        //     log::debug!("ORIGINAL: {}", String::from_utf8(translate).unwrap());
-        //     log::debug!("EDIT    : {}", String::from_utf8(translate_var).unwrap());
-        //     log::debug!("VARIANT : {}", variant);
-        //     log::debug!(
-        //         "ID      : {}",
-        //         String::from_utf8(annotations[0].get_attribute().get_id().to_vec()).unwrap()
-        //     );
-        // }
+        if translate != translate_var {
+            log::debug!("ORIGINAL: {}", String::from_utf8(translate).unwrap());
+            log::debug!("EDIT    : {}", String::from_utf8(translate_var).unwrap());
+            log::debug!("VARIANT : {}", variant);
+            log::debug!(
+                "ID      : {}",
+                String::from_utf8(annotations[0].get_attribute().get_id().to_vec()).unwrap()
+            );
+        }
 
         vec![]
     }
