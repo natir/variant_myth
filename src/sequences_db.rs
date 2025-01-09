@@ -318,9 +318,9 @@ mod tests {
 
     fn annotation_setup() -> Vec<annotation::Annotation> {
         vec![
-            annotation::Annotation::test_annotation(b"sequence".to_vec(), 10, 37),
-            annotation::Annotation::test_annotation(b"sequence".to_vec(), 49, 70),
-            annotation::Annotation::test_annotation(b"sequence".to_vec(), 91, 115),
+            annotation::Annotation::test_annotation(b"sequence".to_vec(), 10, 36),
+            annotation::Annotation::test_annotation(b"sequence".to_vec(), 49, 69),
+            annotation::Annotation::test_annotation(b"sequence".to_vec(), 91, 114),
         ]
     }
 
