@@ -67,7 +67,9 @@ impl AnnotationMythBuilder {
 /// Store information around variant
 #[derive(Debug, PartialEq)]
 pub struct Myth {
+    /// Variant associate to Myth
     pub variant: variant::Variant,
+    /// Annotation Myth associate to variant
     pub annotations: Vec<AnnotationMyth>,
 }
 
