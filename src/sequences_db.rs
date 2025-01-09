@@ -190,6 +190,7 @@ impl SequencesDataBase {
 
             let (coding, variant_pos, change) =
                 self.coding_internal(seqname, annotations, start, stop, variant.position)?;
+
             if change {
                 let mut edit = coding[..variant_pos as usize].to_vec();
                 edit.extend(&variant.alt_seq);
@@ -253,7 +254,7 @@ impl SequencesDataBase {
             } else {
                 // all other case
                 result.extend(self.get_interval(seqname, &annotation.get_interval())?);
-                if annotation.get_start() < variant_pos && stop > variant_pos {
+                if annotation.get_start() < variant_pos && annotation.get_stop() > variant_pos {
                     variant_pos -= annotation.get_start();
                     in_coding = true;
                 }
