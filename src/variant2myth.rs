@@ -107,19 +107,31 @@ impl<'a> Variant2Myth<'a> {
             Vec<&annotation::Annotation>,
         > = ahash::AHashMap::new();
 
-        for annotation in annotations {
-            let key = (
-                annotation.get_source().to_vec(),
-                annotation.get_parent().to_vec(),
-            );
+        for transcript in annotations
+            .iter()
+            .filter(|&&x| x.get_feature() == b"transcript")
+        {
+            for annotation in self
+                .annotations
+                .get_annotation(&variant.seqname, transcript.get_interval())
+            {
+                let key = (
+                    annotation.get_source().to_vec(),
+                    annotation.get_parent().to_vec(),
+                );
 
-            transcript2annotations
-                .entry(key)
-                .and_modify(|x| x.push(annotation))
-                .or_insert(vec![annotation]);
+                transcript2annotations
+                    .entry(key)
+                    .and_modify(|x| x.push(annotation))
+                    .or_insert(vec![annotation]);
+            }
         }
 
         for (key, annotations) in transcript2annotations {
+            for annotation in &annotations {
+                log::debug!("{}", annotation);
+            }
+
             let mut transcript_myth = myth::AnnotationMyth::builder()
                 .source(key.0)
                 .transcript_id(key.1)
