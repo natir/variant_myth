@@ -9,13 +9,12 @@
 use anyhow::Context as _;
 use clap::Parser as _;
 
-use variant_myth::annotate;
+use variant_myth::vcf2json;
 /* project use */
 use variant_myth::annotations_db;
 use variant_myth::cli;
 use variant_myth::error;
 use variant_myth::output;
-use variant_myth::output::writer::MythWriter;
 use variant_myth::sequences_db;
 use variant_myth::translate;
 use variant_myth::variant;
@@ -46,21 +45,16 @@ fn main() -> error::Result<()> {
     let output_type = crate::output::OutputFileType::Parquet;
 
     let block_size = 1 << 13;
-    let writer: &mut dyn MythWriter = match output_type {
-        output::OutputFileType::Parquet => {
-            &mut output::parquet::ParquetWriter::new(params.output()?, block_size)?
-        }
-        output::OutputFileType::JSON => &mut output::json::JsonWriter::new(params.output()?)?,
-    };
 
-    annotate(
+    vcf2json(
         &annotations,
         &sequences,
         &translate,
         vcf_reader,
         params.no_annotation(),
         block_size,
-        writer,
+        params.output()?,
+        output_type,
     )?;
     log::info!("End annotate variant");
 

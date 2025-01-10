@@ -4,6 +4,8 @@
 
 /* std use */
 
+use std::io::BufWriter;
+
 /* crate use */
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -31,111 +33,28 @@ impl<T> WriteSeek for T where T: std::io::Write + std::io::Seek {}
 
 #[cfg(not(feature = "parallel"))]
 /// For each variants found matching annotations
-pub fn vcf2json<R, W>(
-    annotations: &annotations_db::AnnotationsDataBase,
-    sequences: &sequences_db::SequencesDataBase,
-    translate: &translate::Translate,
-    mut vcf_reader: variant::VcfReader<R>,
-    no_annotation: bool,
-    mut output: W,
-) -> error::Result<()>
-where
-    R: std::io::BufRead,
-    W: std::io::Write + std::io::Seek + std::marker::Send + 'static,
-{
-    let variant2myth =
-        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
-
-    let schema = std::sync::Arc::new(output::parquet::schema());
-    let mut writer = parquet::arrow::arrow_writer::ArrowWriter::try_new(
-        &mut output,
-        schema.clone(),
-        Default::default(),
-    )?;
-
-    let block_size = 1 << 13;
-
-    let mut end = true;
-    while end {
-        let mut chrs = Vec::with_capacity(block_size);
-        let mut poss = Vec::with_capacity(block_size);
-        let mut refs = Vec::with_capacity(block_size);
-        let mut alts = Vec::with_capacity(block_size);
-        let mut source = Vec::with_capacity(block_size);
-        let mut transcript_id = Vec::with_capacity(block_size);
-        let mut gene_name = Vec::with_capacity(block_size);
-        let mut effects = Vec::with_capacity(block_size);
-        let mut impact: Vec<u8> = Vec::with_capacity(block_size);
-
-        for _ in 0..block_size {
-            if let Some(result) = vcf_reader.next() {
-                let variant = result?;
-
-                let myth = variant2myth.myth(variant);
-
-                for annotation in myth.annotations {
-                    chrs.push(unsafe { String::from_utf8_unchecked(myth.variant.seqname.clone()) });
-                    poss.push(myth.variant.position);
-                    refs.push(unsafe { String::from_utf8_unchecked(myth.variant.ref_seq.clone()) });
-                    alts.push(unsafe { String::from_utf8_unchecked(myth.variant.alt_seq.clone()) });
-                    source.push(unsafe { String::from_utf8_unchecked(annotation.source) });
-                    transcript_id
-                        .push(unsafe { String::from_utf8_unchecked(annotation.transcript_id) });
-                    gene_name.push(unsafe { String::from_utf8_unchecked(annotation.gene_name) });
-                    effects.push(
-                        annotation
-                            .effects
-                            .iter()
-                            .map(|e| unsafe { String::from_utf8_unchecked(e.clone().into()) })
-                            .collect::<Vec<String>>()
-                            .join(";"),
-                    );
-                    impact.push(annotation.impact as u8);
-                }
-            } else {
-                end = false;
-                break;
-            }
-        }
-
-        let batch = arrow::record_batch::RecordBatch::try_new(
-            schema.clone(),
-            vec![
-                std::sync::Arc::new(arrow::array::StringArray::from(chrs)),
-                std::sync::Arc::new(arrow::array::UInt64Array::from(poss)),
-                std::sync::Arc::new(arrow::array::StringArray::from(refs)),
-                std::sync::Arc::new(arrow::array::StringArray::from(alts)),
-                std::sync::Arc::new(arrow::array::StringArray::from(source)),
-                std::sync::Arc::new(arrow::array::StringArray::from(transcript_id)),
-                std::sync::Arc::new(arrow::array::StringArray::from(gene_name)),
-                std::sync::Arc::new(arrow::array::StringArray::from(effects)),
-                std::sync::Arc::new(arrow::array::UInt8Array::from(impact)),
-            ],
-        )?;
-
-        writer.write(&batch)?;
-    }
-
-    writer.close()?;
-    Ok(())
-}
-
-#[cfg(not(feature = "parallel"))]
-/// For each variants found matching annotations
-pub fn annotate<R>(
+pub fn vcf2json<R>(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     mut vcf_reader: variant::VcfReader<R>,
     no_annotation: bool,
     block_size: usize,
-    writer: &mut dyn MythWriter,
+    output: BufWriter<Box<dyn WriteSeek + Send>>,
+    output_type: output::OutputFileType,
 ) -> error::Result<()>
 where
     R: std::io::BufRead,
 {
     let variant2myth =
         variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
+
+    let mut writer: Box<dyn MythWriter> = match output_type {
+        output::OutputFileType::Parquet => {
+            Box::new(output::parquet::ParquetWriter::new(output, block_size)?)
+        }
+        output::OutputFileType::JSON => Box::new(output::json::JsonWriter::new(output)?),
+    };
 
     let mut end = true;
     while end {
@@ -158,96 +77,40 @@ where
 }
 
 #[cfg(feature = "parallel")]
-/// For each variants found matching annotations
-pub fn vcf2json<R, W>(
+pub fn vcf2json<R>(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
     no_annotation: bool,
-    mut output: W,
+    block_size: usize,
+    output: BufWriter<Box<dyn WriteSeek + Send>>,
+    output_type: output::OutputFileType,
 ) -> error::Result<()>
 where
     R: std::io::BufRead + std::marker::Send,
-    W: std::io::Write + std::io::Seek + std::marker::Send + 'static,
 {
     let (tx, rx) = std::sync::mpsc::channel::<myth::Myth>();
 
-    let write_thread = std::thread::spawn(move || {
-        let schema = std::sync::Arc::new(output::schema());
-        let mut writer = parquet::arrow::arrow_writer::ArrowWriter::try_new(
-            &mut output,
-            schema.clone(),
-            Default::default(),
-        )
-        .unwrap();
+    let write_thread = std::thread::spawn(move || -> error::Result<()> {
+        let mut writer: Box<dyn MythWriter> = match output_type {
+            output::OutputFileType::Parquet => {
+                Box::new(output::parquet::ParquetWriter::new(output, block_size)?)
+            }
+            output::OutputFileType::JSON => Box::new(output::json::JsonWriter::new(output)?),
+        };
 
-        let block_size = 1 << 13;
-
-        let mut end = true;
-        while end {
-            let mut chrs = Vec::with_capacity(block_size);
-            let mut poss = Vec::with_capacity(block_size);
-            let mut refs = Vec::with_capacity(block_size);
-            let mut alts = Vec::with_capacity(block_size);
-            let mut source = Vec::with_capacity(block_size);
-            let mut transcript_id = Vec::with_capacity(block_size);
-            let mut gene_name = Vec::with_capacity(block_size);
-            let mut effects = Vec::with_capacity(block_size);
-            let mut impact: Vec<u8> = Vec::with_capacity(block_size);
-
+        'outer: loop {
             for _ in 0..block_size {
                 if let Some(myth) = rx.iter().next() {
-                    for annotation in myth.annotations {
-                        chrs.push(unsafe {
-                            String::from_utf8_unchecked(myth.variant.seqname.clone())
-                        });
-                        poss.push(myth.variant.position);
-                        refs.push(unsafe {
-                            String::from_utf8_unchecked(myth.variant.ref_seq.clone())
-                        });
-                        alts.push(unsafe {
-                            String::from_utf8_unchecked(myth.variant.alt_seq.clone())
-                        });
-                        source.push(unsafe { String::from_utf8_unchecked(annotation.source) });
-                        transcript_id
-                            .push(unsafe { String::from_utf8_unchecked(annotation.transcript_id) });
-                        gene_name
-                            .push(unsafe { String::from_utf8_unchecked(annotation.gene_name) });
-                        effects.push(
-                            annotation
-                                .effects
-                                .iter()
-                                .map(|e| unsafe { String::from_utf8_unchecked(e.clone().into()) })
-                                .collect::<Vec<String>>()
-                                .join(";"),
-                        );
-                        impact.push(annotation.impact as u8);
-                    }
+                    MythWriter::write_myth(writer.as_mut(), myth)?;
                 } else {
-                    end = false;
-                    break;
+                    break 'outer;
                 }
             }
-
-            let batch = arrow::record_batch::RecordBatch::try_new(
-                schema.clone(),
-                vec![
-                    std::sync::Arc::new(arrow::array::StringArray::from(chrs)),
-                    std::sync::Arc::new(arrow::array::UInt64Array::from(poss)),
-                    std::sync::Arc::new(arrow::array::StringArray::from(refs)),
-                    std::sync::Arc::new(arrow::array::StringArray::from(alts)),
-                    std::sync::Arc::new(arrow::array::StringArray::from(source)),
-                    std::sync::Arc::new(arrow::array::StringArray::from(transcript_id)),
-                    std::sync::Arc::new(arrow::array::StringArray::from(gene_name)),
-                    std::sync::Arc::new(arrow::array::StringArray::from(effects)),
-                    std::sync::Arc::new(arrow::array::UInt8Array::from(impact)),
-                ],
-            )
-            .unwrap();
-
-            writer.write(&batch).unwrap();
         }
+        MythWriter::close(writer.as_mut())?;
+        Ok(())
     });
 
     let variant2myth =
@@ -258,6 +121,7 @@ where
         .filter(Result::is_ok)
         .map(error::Result::unwrap)
         .map(|variant| tx.send(variant2myth.myth(variant)))
+        .filter(|r| r.is_err())
         .collect::<Vec<core::result::Result<(), std::sync::mpsc::SendError<myth::Myth>>>>();
 
     for result in results {
@@ -266,7 +130,7 @@ where
 
     drop(tx);
 
-    write_thread.join().unwrap();
+    write_thread.join().unwrap()?;
 
     Ok(())
 }

@@ -6,7 +6,7 @@
 
 /* project use */
 
-use crate::error::{self, Result};
+use crate::error::Result;
 use crate::myth::Myth;
 use std::io::Write;
 use std::marker::Send;
@@ -34,7 +34,7 @@ pub fn schema() -> arrow::datatypes::Schema {
 }
 
 pub struct ParquetWriter<W: Write + std::marker::Send + std::io::Seek + 'static> {
-    writer: Option<parquet::arrow::arrow_writer::ArrowWriter<W>>,
+    writer: parquet::arrow::arrow_writer::ArrowWriter<W>,
     schema: std::sync::Arc<arrow::datatypes::Schema>,
     chrs: Vec<String>,
     poss: Vec<u64>,
@@ -56,7 +56,7 @@ impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
             Default::default(),
         )?;
         Ok(ParquetWriter {
-            writer: Some(writer),
+            writer,
             schema,
             chrs: Vec::with_capacity(block_size),
             poss: Vec::with_capacity(block_size),
@@ -104,10 +104,8 @@ impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> 
         self.chrs.len() == self.chrs.capacity()
     }
     fn finalize(&mut self) -> Result<()> {
-        // This invalidates the writer, making it the None variant
-        if let Some(writer) = self.writer.take() {
-            writer.close()?;
-        }
+        let metadata = self.writer.finish()?;
+        log::info!("Done writing {} rows.", metadata.num_rows);
         Ok(())
     }
     fn write_batch(&mut self) -> Result<()> {
@@ -144,11 +142,7 @@ impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> 
             ],
         )?;
 
-        if let Some(writer) = self.writer.as_mut() {
-            writer.write(&batch)?;
-        } else {
-            todo!("self.writer is None! Are you trying to write after call to close()?")
-        }
+        self.writer.write(&batch)?;
         Ok(())
     }
 }
