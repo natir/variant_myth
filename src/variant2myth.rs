@@ -18,6 +18,25 @@ use crate::sequences_db;
 use crate::translate;
 use crate::variant;
 
+#[enumflags2::bitflags]
+#[repr(u8)]
+#[derive(std::clone::Clone, std::marker::Copy, std::fmt::Debug)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+/// Choose how variant are annotate
+pub enum AnnotatorsChoicesRaw {
+    /// Variant are annotate with just gene information
+    Gene = 1 << 1,
+    /// Variant are annotate with feature
+    Feature = 1 << 2,
+    /// Variant are annotate with effect
+    Effect = 1 << 3,
+    /// Variant are annotate with Hgvs
+    Hgvs = 1 << 4,
+}
+
+/// Choose how variant are annotate
+pub type AnnotatorsChoices = enumflags2::BitFlags<AnnotatorsChoicesRaw>;
+
 trait Annotator {
     fn annotate(
         &self,
@@ -30,7 +49,6 @@ trait Annotator {
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
     annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>,
-    no_annotators: bool,
 }
 
 impl<'a> Variant2Myth<'a> {
@@ -39,38 +57,41 @@ impl<'a> Variant2Myth<'a> {
         annotations: &'a annotations_db::AnnotationsDataBase,
         translate: &'a translate::Translate,
         sequences: &'a sequences_db::SequencesDataBase,
-        no_annotators: bool,
+        annotators_choices: AnnotatorsChoices,
     ) -> Self {
-        let mut annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>> = vec![
-            Box::new(feature_presence::FeaturePresence::new(
+        let mut annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>> =
+            Vec::new();
+
+        if annotators_choices.contains(AnnotatorsChoicesRaw::Feature) {
+            annotators.push(Box::new(feature_presence::FeaturePresence::new(
                 b"upstream",
                 effect::Effect::UpstreamGeneVariant,
-            )),
-            Box::new(feature_presence::FeaturePresence::new(
+            )));
+
+            annotators.push(Box::new(feature_presence::FeaturePresence::new(
                 b"downstream",
                 effect::Effect::DownstreamGeneVariant,
-            )),
-            Box::new(feature_presence::FeaturePresence::new(
+            ))
+                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
+            annotators.push(Box::new(feature_presence::FeaturePresence::new(
                 b"5UTR",
                 effect::Effect::FivePrimeUtrVariant,
-            )),
-            Box::new(feature_presence::FeaturePresence::new(
+            ))
+                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
+            annotators.push(Box::new(feature_presence::FeaturePresence::new(
                 b"3UTR",
                 effect::Effect::ThreePrimeUtrVariant,
-            )),
-            Box::new(sequence_analysis::SequenceAnalysis::new(
+            ))
+                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
+            annotators.push(Box::new(sequence_analysis::SequenceAnalysis::new(
                 translate, sequences,
-            )),
-        ];
-
-        if no_annotators {
-            annotators.clear()
+            ))
+                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
         }
 
         Self {
             annotations,
             annotators,
-            no_annotators,
         }
     }
 
@@ -137,9 +158,6 @@ impl<'a> Variant2Myth<'a> {
                 .collect::<Vec<&[u8]>>()
                 .join(&b';');
 
-            if self.no_annotators && gene_name.is_empty() {
-                continue;
-            }
             transcript_myth = transcript_myth.gene_name(gene_name);
 
             for annotator in &self.annotators[..] {
@@ -150,5 +168,63 @@ impl<'a> Variant2Myth<'a> {
         }
 
         myth
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /* std use */
+
+    /* crate use */
+
+    /* project use */
+
+    use crate::variant2myth::AnnotatorsChoicesRaw;
+
+    use super::AnnotatorsChoices;
+
+    #[test]
+    fn annotator_choices() {
+        let mut flag = AnnotatorsChoices::empty();
+
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Effect));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Feature));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Gene));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Hgvs));
+
+        flag |= AnnotatorsChoicesRaw::Effect;
+
+        assert!(flag.contains(AnnotatorsChoicesRaw::Effect));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Feature));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Gene));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Hgvs));
+
+        flag |= AnnotatorsChoicesRaw::Feature;
+
+        assert!(flag.contains(AnnotatorsChoicesRaw::Effect));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Feature));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Gene));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Hgvs));
+
+        flag |= AnnotatorsChoicesRaw::Gene;
+
+        assert!(flag.contains(AnnotatorsChoicesRaw::Effect));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Feature));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Gene));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Hgvs));
+
+        flag |= AnnotatorsChoicesRaw::Hgvs;
+
+        assert!(flag.contains(AnnotatorsChoicesRaw::Effect));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Feature));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Gene));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Hgvs));
+
+        flag = AnnotatorsChoicesRaw::Effect | AnnotatorsChoicesRaw::Hgvs;
+
+        assert!(flag.contains(AnnotatorsChoicesRaw::Effect));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Feature));
+        assert!(!flag.contains(AnnotatorsChoicesRaw::Gene));
+        assert!(flag.contains(AnnotatorsChoicesRaw::Hgvs));
     }
 }

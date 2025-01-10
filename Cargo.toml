@@ -27,6 +27,7 @@ path = "src/main.rs"
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
 clairiere      = { git = "https://github.com/natir/clairiere.git" }
+enumflags2     = { version = "0.7" }
 
 # Other
 derive_builder   = { version = "0.20" }
@@ -42,7 +43,7 @@ arrow          = { version = "53" }
 parquet        = { version = "53" }
 
 # CLI management
-clap           = { version = "4", features = ["derive"] }
+clap           = { version = "4", features = ["derive"], optional = true }
 
 # Error management
 thiserror      = { version = "2" }
@@ -64,9 +65,10 @@ tempfile       = { version = "3" }
 
 
 [features]
-default = []
+default  = ["cli"]
+cli      = ["dep:clap"]
 parallel = ["dep:rayon", "clairiere/parallel"]
-bench = []
+bench    = []
 
 
 [profile.release]

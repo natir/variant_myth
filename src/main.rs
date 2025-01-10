@@ -44,7 +44,7 @@ fn main() -> error::Result<()> {
         &sequences,
         &translate,
         vcf_reader,
-        params.no_annotation(),
+        params.annotators_choices(),
         params.output()?,
     )?;
     log::info!("End annotate variant");

@@ -3,11 +3,13 @@
 /* std use */
 
 /* crate use */
-
 use std::io::Read;
+
+use enumflags2::BitFlag as _;
 
 /* project use */
 use crate::error;
+use crate::variant2myth;
 
 fn get_reader(
     path: &std::path::PathBuf,
@@ -39,7 +41,7 @@ pub struct Command {
     reference_path: std::path::PathBuf,
 
     /// Annotation path
-    #[clap(short = 'a', long = "annotations")]
+    #[clap(short = 'a', long = "annotations", required = true)]
     annotations_path: Vec<std::path::PathBuf>,
 
     /// Translate table path, if not set use human
@@ -54,9 +56,9 @@ pub struct Command {
     #[clap(short = 'd', long = "updown-distance")]
     updown_distance: Option<u64>,
 
-    /// Not add annotations just found which gene match variant
-    #[clap(short = 'n', long = "no-annotation")]
-    no_annotation: bool,
+    /// Select which type of annotation you want run
+    #[clap(short = 'c', long = "annotators-choices")]
+    annotators_choices: Vec<variant2myth::AnnotatorsChoicesRaw>,
 
     // Generic option
     #[cfg(feature = "parallel")]
@@ -133,8 +135,12 @@ impl Command {
     }
 
     /// Get no annotation
-    pub fn no_annotation(&self) -> bool {
-        self.no_annotation
+    pub fn annotators_choices(&self) -> variant2myth::AnnotatorsChoices {
+        self.annotators_choices
+            .iter()
+            .fold(variant2myth::AnnotatorsChoicesRaw::empty(), |acc, x| {
+                acc | *x
+            })
     }
 
     /// Get number of thread

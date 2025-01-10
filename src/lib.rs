@@ -13,7 +13,6 @@ use rayon::prelude::*;
 /* mod declaration */
 pub mod annotation;
 pub mod annotations_db;
-pub mod cli;
 pub mod effect;
 pub mod error;
 pub mod myth;
@@ -22,6 +21,9 @@ pub mod sequences_db;
 pub mod translate;
 pub mod variant;
 pub mod variant2myth;
+
+#[cfg(feature = "cli")]
+pub mod cli;
 
 /// Just a trait to combine Write and Seek trait
 pub trait WriteSeek: std::io::Write + std::io::Seek {}
@@ -34,7 +36,7 @@ pub fn vcf2json<R, W>(
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     mut vcf_reader: variant::VcfReader<R>,
-    no_annotation: bool,
+    annotators_choices: variant2myth::AnnotatorsChoices,
     mut output: W,
 ) -> error::Result<()>
 where
@@ -42,7 +44,7 @@ where
     W: std::io::Write + std::io::Seek + std::marker::Send + 'static,
 {
     let variant2myth =
-        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
     let schema = std::sync::Arc::new(output::schema());
     let mut writer = parquet::arrow::arrow_writer::ArrowWriter::try_new(
@@ -125,7 +127,7 @@ pub fn vcf2json<R, W>(
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
-    no_annotation: bool,
+    annotators_choices: variant2myth::AnnotatorsChoices,
     mut output: W,
 ) -> error::Result<()>
 where
@@ -212,7 +214,7 @@ where
     });
 
     let variant2myth =
-        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
     let results = vcf_reader
         .par_bridge()
