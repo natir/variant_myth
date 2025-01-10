@@ -221,6 +221,7 @@ where
         .filter(Result::is_ok)
         .map(error::Result::unwrap)
         .map(|variant| tx.send(variant2myth.myth(variant)))
+        .filter(|r| r.is_err())
         .collect::<Vec<core::result::Result<(), std::sync::mpsc::SendError<myth::Myth>>>>();
 
     for result in results {
