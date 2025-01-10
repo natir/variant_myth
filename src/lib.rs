@@ -87,7 +87,6 @@ pub fn vcf2json<R>(
     block_size: usize,
     output: BufWriter<Box<dyn WriteSeek + Send>>,
     output_type: output::OutputFileType,
-    mut output: W,
 ) -> error::Result<()>
 where
     R: std::io::BufRead + std::marker::Send,
