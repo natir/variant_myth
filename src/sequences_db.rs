@@ -39,7 +39,6 @@ impl SequencesDataBase {
 
         for result in records {
             let record = result?;
-
             inner.insert(record.name().to_vec(), record.sequence().as_ref().to_vec());
         }
 
@@ -110,7 +109,12 @@ impl SequencesDataBase {
 
                 edit.extend(&epissed[..pos_in_epissed as usize]);
                 edit.extend(variant.alt_seq.to_vec());
-                edit.extend(&epissed[(pos_in_epissed as usize + variant.ref_seq.len())..]);
+                edit.extend(
+                    &epissed[std::cmp::min(
+                        pos_in_epissed as usize + variant.ref_seq.len(),
+                        epissed.len(),
+                    )..],
+                );
                 break;
             }
         }
@@ -127,11 +131,15 @@ impl SequencesDataBase {
         &self,
         annotations: &[&annotation::Annotation],
         strand: annotation::Strand,
-        start_position: std::option::Option<u64>,
-        stop_position: std::option::Option<u64>,
+        mut start_position: std::option::Option<u64>,
+        mut stop_position: std::option::Option<u64>,
     ) -> error::Result<Vec<u8>> {
         if let Some(first) = annotations.first() {
             let seqname = first.get_seqname();
+
+            if strand == annotation::Strand::Reverse {
+                (start_position, stop_position) = (stop_position, start_position)
+            }
 
             let start = if let Some(start) = start_position {
                 start - 1
@@ -144,37 +152,10 @@ impl SequencesDataBase {
                 u64::MAX
             };
 
-            let mut result = Vec::new();
-            for annotation in annotations {
-                if annotation.get_stop() < start {
-                    // before start skip
-                    continue;
-                } else if start < annotation.get_stop()
-                    && start > annotation.get_start()
-                    && stop < annotation.get_stop()
-                    && stop > annotation.get_start()
-                {
-                    // start stop in same exon
-                    result.extend(self.get_interval(seqname, &(start..stop))?);
-                    break;
-                } else if start < annotation.get_stop() && start > annotation.get_start() {
-                    // start exon
-                    result.extend(self.get_interval(seqname, &(start..annotation.get_stop()))?);
-                } else if stop < annotation.get_stop() && stop > annotation.get_start() {
-                    // stop exon
-                    result.extend(self.get_interval(seqname, &(annotation.get_start()..stop))?);
-                    break;
-                } else {
-                    // all other case
-                    result.extend(self.get_interval(seqname, &annotation.get_interval())?)
-                }
-            }
+            let (coding, _, _) =
+                self.coding_internal(seqname, annotations, start, stop, u64::MAX)?;
 
-            if strand == annotation::Strand::Reverse {
-                rev_comp(&mut result);
-            }
-
-            Ok(result)
+            Self::coding_end(coding, strand)
         } else {
             Ok(vec![])
         }
@@ -185,69 +166,120 @@ impl SequencesDataBase {
         &self,
         annotations: &[&annotation::Annotation],
         strand: annotation::Strand,
-        start_position: std::option::Option<u64>,
-        stop_position: std::option::Option<u64>,
         variant: &variant::Variant,
+        mut start_position: std::option::Option<u64>,
+        mut stop_position: std::option::Option<u64>,
     ) -> error::Result<Vec<u8>> {
-        let mut coding = self.coding(
-            annotations,
-            annotation::Strand::Forward,
-            start_position,
-            stop_position,
-        )?;
-        let mut edit = Vec::new();
+        if let Some(first) = annotations.first() {
+            let seqname = first.get_seqname();
 
-        let start = if let Some(start) = start_position {
-            start - 1
-        } else {
-            1
-        };
-        let stop = if let Some(stop) = stop_position {
-            stop - 1
-        } else {
-            u64::MAX
-        };
-
-        if variant.position < start || variant.position > stop {
             if strand == annotation::Strand::Reverse {
-                rev_comp(&mut coding);
+                (start_position, stop_position) = (stop_position, start_position)
             }
 
-            return Ok(coding);
-        }
+            let start = if let Some(start) = start_position {
+                start - 1
+            } else {
+                0
+            };
+            let stop = if let Some(stop) = stop_position {
+                stop - 1
+            } else {
+                u64::MAX
+            };
 
-        let mut pos_in_coding = -(start as i64) + 1;
+            let (coding, variant_pos, change) =
+                self.coding_internal(seqname, annotations, start, stop, variant.position)?;
+
+            if change {
+                let mut edit = coding[..variant_pos as usize].to_vec();
+                edit.extend(&variant.alt_seq);
+                edit.extend(
+                    &coding[std::cmp::min(
+                        variant_pos as usize + variant.ref_seq.len(),
+                        coding.len(),
+                    )..],
+                );
+
+                Self::coding_end(edit, strand)
+            } else {
+                Self::coding_end(coding, strand)
+            }
+        } else {
+            Ok(vec![])
+        }
+    }
+
+    fn coding_internal(
+        &self,
+        seqname: &[u8],
+        annotations: &[&annotation::Annotation],
+        start: u64,
+        stop: u64,
+        mut variant_pos: u64,
+    ) -> error::Result<(Vec<u8>, u64, bool)> {
+        let mut result = Vec::new();
+        let mut in_coding = false;
         for annotation in annotations {
-            if annotation.get_stop() < variant.position {
-                pos_in_coding += (annotation.get_stop() - annotation.get_start()) as i64;
-            } else if annotation.get_start() < variant.position
-                && annotation.get_stop() > variant.position
+            if annotation.get_stop() < start {
+                // before start skip
+                continue;
+            } else if start < annotation.get_stop()
+                && start > annotation.get_start()
+                && stop < annotation.get_stop()
+                && stop > annotation.get_start()
             {
-                pos_in_coding += (variant.position - annotation.get_start()) as i64;
-
-                edit.extend(&coding[..pos_in_coding as usize]);
-                edit.extend(variant.alt_seq.to_vec());
-                edit.extend(&coding[(pos_in_coding as usize + variant.ref_seq.len())..]);
+                // start stop in same exon
+                result.extend(self.get_interval(seqname, &(start..stop))?);
+                if start < variant_pos && stop > variant_pos {
+                    variant_pos -= start;
+                    in_coding = true;
+                }
                 break;
+            } else if start < annotation.get_stop() && start > annotation.get_start() {
+                // start exon
+                result.extend(self.get_interval(seqname, &(start..annotation.get_stop()))?);
+                if start < variant_pos && annotation.get_stop() > variant_pos {
+                    variant_pos -= start;
+                    in_coding = true;
+                }
+            } else if stop < annotation.get_stop() && stop > annotation.get_start() {
+                // stop exon
+                result.extend(self.get_interval(seqname, &(annotation.get_start()..stop))?);
+                if annotation.get_start() < variant_pos && stop > variant_pos {
+                    variant_pos -= annotation.get_start();
+                    in_coding = true;
+                }
+                break;
+            } else {
+                // all other case
+                result.extend(self.get_interval(seqname, &annotation.get_interval())?);
+                if annotation.get_start() < variant_pos && annotation.get_stop() > variant_pos {
+                    variant_pos -= annotation.get_start();
+                    in_coding = true;
+                }
             }
         }
 
+        Ok((result, variant_pos, in_coding))
+    }
+
+    fn coding_end(mut sequence: Vec<u8>, strand: annotation::Strand) -> error::Result<Vec<u8>> {
         if strand == annotation::Strand::Reverse {
-            rev_comp(&mut edit);
+            rev_comp(&mut sequence);
         }
 
-        Ok(edit)
+        Ok(sequence)
     }
 }
 
 #[cfg(test)]
 mod tests {
     /* std use */
+    use std::io::{Seek, Write as _};
 
     /* crate use */
     use biotest::Format as _;
-
-    use crate::translate::Translate;
 
     /* project use */
     use super::*;
@@ -266,32 +298,40 @@ mod tests {
         Ok(())
     }
 
-    fn setup() -> error::Result<SequencesDataBase> {
-        let mut rng = biotest::rand();
-        let generator = biotest::Fasta::default();
+    fn seqdb_setup() -> error::Result<SequencesDataBase> {
+        let mut seq_file = std::io::Cursor::new(Vec::new());
 
-        let mut temp_input = vec![];
-        generator.records(&mut temp_input, &mut rng, 5)?;
-        let input: std::io::BufReader<Box<dyn std::io::Read + Send>> =
-            std::io::BufReader::new(Box::new(std::io::Cursor::new(temp_input.to_vec())));
+        seq_file.write_all(b">sequence\n")?;
+        seq_file.write_all(b"ttcgtctag")?;
+        seq_file.write_all(b"ATGACCGCCATGCAAAGGCTCACTGGG")?;
+        seq_file.write_all(b"ctctcttcaccc")?;
+        seq_file.write_all(b"CTTAAGCATCTACGTATGCGG")?;
+        seq_file.write_all(b"gatcgcaggcctctctcggtg")?;
+        seq_file.write_all(b"TGTCGTCGGTCGAGGGTTTAACAT")?;
+        seq_file.write_all(b"atcctgcttggccaa")?;
 
-        // seqname:
-        // - GSWNPZYBHL
-        // - RGKPRHQMHK
-        // - CVZGQYSRGI
-        // - ELUFGTSRIU
-        // - RMIVZUTDJN
+        seq_file.seek(std::io::SeekFrom::Start(0))?;
 
-        SequencesDataBase::from_reader(input)
+        SequencesDataBase::from_reader(std::io::BufReader::new(
+            Box::new(seq_file) as Box<dyn std::io::Read + Send>
+        ))
+    }
+
+    fn annotation_setup() -> Vec<annotation::Annotation> {
+        vec![
+            annotation::Annotation::test_annotation(b"sequence".to_vec(), 10, 36),
+            annotation::Annotation::test_annotation(b"sequence".to_vec(), 49, 69),
+            annotation::Annotation::test_annotation(b"sequence".to_vec(), 91, 114),
+        ]
     }
 
     #[test]
     fn get_interval() -> error::Result<()> {
-        let seqdb = setup()?;
+        let seqdb = seqdb_setup()?;
 
         assert_eq!(
-            b"gcGCaCcCGtCtATgTTgTATcaTTCGaCCttcAaGCGCA",
-            seqdb.get_interval(b"CVZGQYSRGI", &(10..50))?
+            b"TGACCGCCATGCAAAGGCTCACTGGGctctcttcacccCT",
+            seqdb.get_interval(b"sequence", &(10..50))?
         );
 
         Ok(())
@@ -299,25 +339,17 @@ mod tests {
 
     #[test]
     fn epissed() -> error::Result<()> {
-        let seqdb = setup()?;
+        let seqdb = seqdb_setup()?;
 
-        let annotations = vec![];
+        let annotations = annotation_setup();
 
         assert_eq!(
             b"".to_vec(),
-            seqdb.epissed(&annotations, annotation::Strand::Forward)?
+            seqdb.epissed(&[], annotation::Strand::Forward)?
         );
 
-        let annotations = vec![
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 2, 12),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 15, 32),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 41, 59),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 69, 80),
-        ];
-
-        // CttAacGtTtAtGTgACAGCCaCGctGagattTGtgCttaAGggTcCTGcGTAGCTGTCCACgTTTGagtGaGCatAGGACAAaacTaTTagagGtatAGCcTatTtaaaaCGgcttGGTtgaCtgACTacgtCTaTgTCAGgCtaGTtc
         assert_eq!(
-            b"ttAacGtTtAgACAGCCaCGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
+            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
             seqdb.epissed(
                 &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward
@@ -325,7 +357,7 @@ mod tests {
         );
 
         assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCGtGGCTGTcTaAaCgtTaa".to_vec(),
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
             seqdb.epissed(
                 &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Reverse
@@ -337,19 +369,14 @@ mod tests {
 
     #[test]
     fn epissed_edit() -> error::Result<()> {
-        let seqdb = setup()?;
+        let seqdb = seqdb_setup()?;
 
-        let annotations = vec![
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 2, 12),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 15, 32),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 41, 59),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 69, 80),
-        ];
+        let annotations = annotation_setup();
 
-        let variant = variant::Variant::test_variant(b"RGKPRHQMHK", 22, b"A", b"Agg");
+        let variant = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
 
         assert_eq!(
-            b"ttAacGtTtAgACAGCCaAggGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
+            b"ATGACCgggCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
             seqdb.epissed_edit(
                 &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward,
@@ -358,7 +385,7 @@ mod tests {
         );
 
         assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCccTtGGCTGTcTaAaCgtTaa".to_vec(),
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGcccGGTCAT".to_vec(),
             seqdb.epissed_edit(
                 &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Reverse,
@@ -371,127 +398,72 @@ mod tests {
 
     #[test]
     fn coding() -> error::Result<()> {
-        let seqdb = setup()?;
+        let seqdb = seqdb_setup()?;
+        let annotations = annotation_setup();
 
-        let annotations = vec![];
+        let start_forward = Some(19);
+        let stop_forward = Some(112);
 
-        assert_eq!(
-            b"".to_vec(),
-            seqdb.epissed(&annotations, annotation::Strand::Forward)?
-        );
-
-        let annotations = vec![
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 2, 12),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 15, 32),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 41, 59),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 69, 80),
-        ];
-
-        let annotations_ref = annotations.iter().collect::<Vec<&annotation::Annotation>>();
-
-        // no start no stop
-        assert_eq!(
-            b"ttAacGtTtAgACAGCCaCGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
-            seqdb.coding(&annotations_ref, annotation::Strand::Forward, None, None,)?
-        );
+        let start_reverse = Some(115);
+        let stop_reverse = Some(50);
 
         assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCGtGGCTGTcTaAaCgtTaa".to_vec(),
-            seqdb.coding(&annotations_ref, annotation::Strand::Reverse, None, None,)?
-        );
-
-        // start in first exon
-        assert_eq!(
-            b"AacGtTtAgACAGCCaCGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
-            seqdb.coding(&annotations_ref, annotation::Strand::Forward, Some(4), None,)?
-        );
-
-        assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCGtGGCTGTcTaAaCgtT".to_vec(),
-            seqdb.coding(&annotations_ref, annotation::Strand::Reverse, Some(4), None,)?
-        );
-
-        // start in second exon
-        assert_eq!(
-            b"AGCCaCGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
+            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
             seqdb.coding(
-                &annotations_ref,
-                annotation::Strand::Forward,
-                Some(18),
-                None,
-            )?
-        );
-
-        assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCGtGGCT".to_vec(),
-            seqdb.coding(
-                &annotations_ref,
-                annotation::Strand::Reverse,
-                Some(18),
-                None,
-            )?
-        );
-
-        // start and stop in second exon
-        assert_eq!(
-            b"CCaCGctGag".to_vec(),
-            seqdb.coding(
-                &annotations_ref,
-                annotation::Strand::Forward,
-                Some(20),
-                Some(30),
-            )?
-        );
-
-        assert_eq!(
-            b"ctCagCGtGG".to_vec(),
-            seqdb.coding(
-                &annotations_ref,
-                annotation::Strand::Reverse,
-                Some(20),
-                Some(30),
-            )?
-        );
-
-        // stop in last exon
-        assert_eq!(
-            b"ttAacGtTtAgACAGCCaCGctGagatAGggTcCTGcGTAGCTGTgtGaGC".to_vec(),
-            seqdb.coding(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward,
                 None,
-                Some(75),
-            )?
-        );
-
-        assert_eq!(
-            b"GCtCacACAGCTACgCAGgAccCTatctCagCGtGGCTGTcTaAaCgtTaa".to_vec(),
-            seqdb.coding(
-                &annotations_ref,
-                annotation::Strand::Reverse,
                 None,
-                Some(75),
             )?
         );
 
-        // stop in penultimate exon
         assert_eq!(
-            b"ttAacGtTtAgACAGCCaCGctGagatAGggTcCTG".to_vec(),
+            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
             seqdb.coding(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward,
+                start_forward,
                 None,
-                Some(50),
             )?
         );
 
         assert_eq!(
-            b"CAGgAccCTatctCagCGtGGCTGTcTaAaCgtTaa".to_vec(),
+            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                annotation::Strand::Forward,
+                start_forward,
+                stop_forward,
+            )?
+        );
+
+        assert_eq!(
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
+            seqdb.coding(
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Reverse,
                 None,
-                Some(50),
+                None,
+            )?
+        );
+
+        assert_eq!(
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
+            seqdb.coding(
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                annotation::Strand::Reverse,
+                start_reverse,
+                None,
+            )?
+        );
+
+        assert_eq!(
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
+            seqdb.coding(
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                annotation::Strand::Reverse,
+                start_reverse,
+                stop_reverse,
             )?
         );
 
@@ -500,115 +472,84 @@ mod tests {
 
     #[test]
     fn coding_edit() -> error::Result<()> {
-        let seqdb = setup()?;
+        let seqdb = seqdb_setup()?;
+        let annotations = annotation_setup();
 
-        let annotations = vec![];
+        let start_forward = Some(19);
+        let stop_forward = Some(112);
 
+        let start_reverse = Some(115);
+        let stop_reverse = Some(50);
+
+        let forward_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
         assert_eq!(
-            b"".to_vec(),
-            seqdb.epissed(&annotations, annotation::Strand::Forward)?
-        );
-
-        let annotations = vec![
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 2, 12),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 15, 32),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 41, 59),
-            annotation::Annotation::test_annotation(b"RGKPRHQMHK".to_vec(), 69, 80),
-        ];
-
-        let variant = variant::Variant::test_variant(b"RGKPRHQMHK", 22, b"A", b"Agg");
-
-        let annotations_ref = annotations.iter().collect::<Vec<&annotation::Annotation>>();
-
-        // no start no stop
-        assert_eq!(
-            b"ttAacGtTtAgACAGCCaAggGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
+            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward,
-                None,
-                None,
-                &variant
+                &forward_before,
+                start_forward,
+                stop_forward,
             )?
         );
 
+        let forward_in = variant::Variant::test_variant(b"sequence", 23, b"A", b"t");
         assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCccTtGGCTGTcTaAaCgtTaa".to_vec(),
+            b"ATGCAtAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations_ref,
-                annotation::Strand::Reverse,
-                None,
-                None,
-                &variant
-            )?
-        );
-
-        // variant between start stop
-        assert_eq!(
-            b"AacGtTtAgACAGCCaAggGctGagatAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
-            seqdb.coding_edit(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward,
-                Some(4),
-                None,
-                &variant
+                &forward_in,
+                start_forward,
+                stop_forward,
             )?
         );
 
+        let forward_after = variant::Variant::test_variant(b"sequence", 113, b"A", b"g");
         assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTatctCagCccTtGGCTGTcTaAaCgtT".to_vec(),
+            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations_ref,
-                annotation::Strand::Reverse,
-                Some(4),
-                None,
-                &variant
-            )?
-        );
-
-        // variant before start
-        assert_eq!(
-            b"atAGggTcCTGcGTAGCTGTgtGaGCatAGG".to_vec(),
-            seqdb.coding_edit(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Forward,
-                Some(30),
-                None,
-                &variant
+                &forward_after,
+                start_forward,
+                stop_forward,
             )?
         );
 
+        let reverse_before = variant::Variant::test_variant(b"sequence", 114, b"A", b"g");
         assert_eq!(
-            b"CCTatGCtCacACAGCTACgCAGgAccCTat".to_vec(),
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Reverse,
-                Some(30),
-                None,
-                &variant
+                &reverse_before,
+                start_reverse,
+                stop_reverse,
             )?
         );
 
-        // variant after stop
+        let reverse_in = variant::Variant::test_variant(b"sequence", 61, b"A", b"g");
         assert_eq!(
-            b"ttAacGtTtAgACAG".to_vec(),
+            b"ATGTTAAACCCTCGACCGACGACACCGCATAcGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations_ref,
-                annotation::Strand::Forward,
-                None,
-                Some(20),
-                &variant
-            )?
-        );
-
-        assert_eq!(
-            b"CTGTcTaAaCgtTaa".to_vec(),
-            seqdb.coding_edit(
-                &annotations_ref,
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
                 annotation::Strand::Reverse,
-                None,
-                Some(20),
-                &variant
+                &reverse_in,
+                start_reverse,
+                stop_reverse,
+            )?
+        );
+
+        let reverse_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
+        assert_eq!(
+            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
+            seqdb.coding_edit(
+                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                annotation::Strand::Reverse,
+                &reverse_before,
+                start_reverse,
+                stop_reverse,
             )?
         );
 
@@ -616,84 +557,34 @@ mod tests {
     }
 
     #[test]
-    fn not_random() {
-        let mut seq_file: Vec<u8> = Vec::new();
+    fn single_exon() -> error::Result<()> {
+        let seqdb = seqdb_setup()?;
 
-        seq_file.extend(b">hbb\n");
-        seq_file.extend(b"
-ttcgtctagATGACCGCCATGCAAAGGCTCACTGGGctctcttcacccCTTAAGCATCTACGTATGCGGgatcgcaggcctctctcggtgTGTCGTCGGTCGAGGGTTTAAATGatcctgcttggccaa");
-
-        let seqdb = SequencesDataBase::from_reader(std::io::BufReader::new(Box::new(
-            std::io::Cursor::new(seq_file),
-        )
-            as Box<dyn std::io::Read + Send>))
-        .unwrap();
-
-        let annotations = vec![
-            annotation::Annotation::test_annotation(b"hbb".to_vec(), 10, 37),
-            annotation::Annotation::test_annotation(b"hbb".to_vec(), 49, 70),
-            annotation::Annotation::test_annotation(b"hbb".to_vec(), 91, 115),
-        ];
+        let annotations = annotation_setup();
 
         assert_eq!(
-            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAAATG".to_vec(),
-            seqdb
-                .epissed(
-                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                    annotation::Strand::Forward
-                )
-                .unwrap()
+            b"ATGACCGCCATGCAAAGGCTCACTGGG".to_vec(),
+            seqdb.coding(
+                &[&annotations[0]],
+                annotation::Strand::Forward,
+                //&forward_in,
+                None,
+                None,
+            )?
         );
 
+        let variant = variant::Variant::test_variant(b"sequence", 23, b"A", b"t");
         assert_eq!(
-            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAAATG".to_vec(),
-            seqdb
-                .coding(
-                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                    annotation::Strand::Forward,
-                    None,
-                    None,
-                )
-                .unwrap()
+            b"ATGACCGCCATGCAtAGGCTCACTGGG".to_vec(),
+            seqdb.coding_edit(
+                &[&annotations[0]],
+                annotation::Strand::Forward,
+                &variant,
+                None,
+                None,
+            )?
         );
 
-        assert_eq!(
-            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAAATG".to_vec(),
-            seqdb
-                .coding(
-                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                    annotation::Strand::Forward,
-                    Some(19),
-                    None,
-                )
-                .unwrap()
-        );
-
-        assert_eq!(
-            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
-            seqdb
-                .coding(
-                    &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                    annotation::Strand::Forward,
-                    Some(19),
-                    Some(112),
-                )
-                .unwrap()
-        );
-
-        let translate = Translate::default();
-        assert_eq!(
-            b"MQRLTGLKHLRMRCRRSRV*".to_vec(),
-            translate.translate(
-                &seqdb
-                    .coding(
-                        &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                        annotation::Strand::Forward,
-                        Some(19),
-                        Some(112),
-                    )
-                    .unwrap()
-            )
-        );
+        Ok(())
     }
 }

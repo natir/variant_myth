@@ -51,7 +51,7 @@ fn main() -> error::Result<()> {
         &sequences,
         &translate,
         vcf_reader,
-        params.no_annotation(),
+        params.annotators_choices(),
         block_size,
         params.output()?,
         output_type,

@@ -15,7 +15,6 @@ use rayon::prelude::*;
 /* mod declaration */
 pub mod annotation;
 pub mod annotations_db;
-pub mod cli;
 pub mod effect;
 pub mod error;
 pub mod myth;
@@ -26,6 +25,8 @@ pub mod variant;
 pub mod variant2myth;
 
 use crate::output::writer::MythWriter;
+#[cfg(feature = "cli")]
+pub mod cli;
 
 /// Just a trait to combine Write and Seek trait
 pub trait WriteSeek: std::io::Write + std::io::Seek {}
@@ -38,7 +39,7 @@ pub fn vcf2json<R>(
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     mut vcf_reader: variant::VcfReader<R>,
-    no_annotation: bool,
+    annotators_choices: variant2myth::AnnotatorsChoices,
     block_size: usize,
     output: BufWriter<Box<dyn WriteSeek + Send>>,
     output_type: output::OutputFileType,
@@ -47,7 +48,7 @@ where
     R: std::io::BufRead,
 {
     let variant2myth =
-        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
     let mut writer: Box<dyn MythWriter> = match output_type {
         output::OutputFileType::Parquet => {
@@ -82,10 +83,11 @@ pub fn vcf2json<R>(
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
-    no_annotation: bool,
+    annotators_choices: variant2myth::AnnotatorsChoices,
     block_size: usize,
     output: BufWriter<Box<dyn WriteSeek + Send>>,
     output_type: output::OutputFileType,
+    mut output: W,
 ) -> error::Result<()>
 where
     R: std::io::BufRead + std::marker::Send,
@@ -114,7 +116,7 @@ where
     });
 
     let variant2myth =
-        variant2myth::Variant2Myth::new(annotations, translate, sequences, no_annotation);
+        variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
     let results = vcf_reader
         .par_bridge()

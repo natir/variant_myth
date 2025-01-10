@@ -74,14 +74,7 @@ impl Attribute {
                 [b'P', b'a', b'r', b'e', b'n', b't', b'=', value @ ..] => {
                     obj.parent = value.to_vec()
                 }
-                _ => {
-                    log::trace!(
-                        "{:?}",
-                        error::Error::AttributeNameNotSupport(unsafe {
-                            String::from_utf8_unchecked(attribute.to_vec())
-                        })
-                    );
-                }
+                _ => {}
             }
         }
 
@@ -213,12 +206,12 @@ impl Annotation {
 
     /// Get stop position 0-based
     pub fn get_stop(&self) -> u64 {
-        self.stop - 1
+        self.stop
     }
 
     /// Create interval associate with annotation 0-based
     pub fn get_interval(&self) -> core::ops::Range<u64> {
-        (self.start - 1)..(self.stop - 1)
+        (self.start - 1)..(self.stop)
     }
 
     /// Get seqname
@@ -362,7 +355,7 @@ mod tests {
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
 
-        assert_eq!(annotation.get_interval(), 29553..31096);
+        assert_eq!(annotation.get_interval(), 29553..31097);
         assert_eq!(annotation.get_seqname(), b"chr1");
         assert_eq!(annotation.get_source(), b"knownGene");
         assert_eq!(annotation.get_feature(), b"transcript");
@@ -435,7 +428,7 @@ mod tests {
         // set value
         assert_eq!(annotation.get_seqname(), b"test_annotation_test");
         assert_eq!(annotation.get_start(), 9);
-        assert_eq!(annotation.get_stop(), 109);
+        assert_eq!(annotation.get_stop(), 110);
 
         // default value
         assert_eq!(annotation.get_source(), b"variant_myth");
