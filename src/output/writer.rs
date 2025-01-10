@@ -22,9 +22,9 @@ pub trait MythWriter {
 
     /// This method is called when we are done with all the input variants.
     /// Do not implement this method!
-    fn finalize(&mut self) -> Result<()> {
+    fn close(&mut self) -> Result<()> {
         self.write_batch()?;
-        self.close()
+        self.finalize()
     }
 
     /// Implement this method to add a Myth object to your batch
@@ -39,5 +39,5 @@ pub trait MythWriter {
     fn write_batch(&mut self) -> Result<()>;
 
     /// Specialized method to safely close your writer
-    fn close(&mut self) -> Result<()>;
+    fn finalize(&mut self) -> Result<()>;
 }

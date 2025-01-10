@@ -152,7 +152,7 @@ where
             }
         }
     }
-    writer.finalize()?;
+    writer.close()?;
 
     Ok(())
 }

@@ -23,7 +23,7 @@ impl<W: std::io::Write> MythWriter for JsonWriter<W> {
     fn batch_full(&self) -> bool {
         true
     }
-    fn close(&mut self) -> Result<()> {
+    fn finalize(&mut self) -> Result<()> {
         Ok(())
     }
     fn write_batch(&mut self) -> Result<()> {

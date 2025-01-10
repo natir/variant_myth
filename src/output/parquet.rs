@@ -103,7 +103,7 @@ impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> 
     fn batch_full(&self) -> bool {
         self.chrs.len() == self.chrs.capacity()
     }
-    fn close(&mut self) -> Result<()> {
+    fn finalize(&mut self) -> Result<()> {
         // This invalidates the writer, making it the None variant
         if let Some(writer) = self.writer.take() {
             writer.close()?;
