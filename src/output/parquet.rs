@@ -5,15 +5,9 @@
 /* crate use */
 
 /* project use */
-
-use parquet::file::properties::WriterProperties;
-
-use crate::error::Result;
-use crate::myth::Myth;
-use std::io::Write;
-use std::marker::Send;
-
-use crate::output::writer::MythWriter;
+use crate::error;
+use crate::myth;
+use crate::output;
 
 fn get_metadata() -> Vec<parquet::file::metadata::KeyValue> {
     crate::output::get_metadata()
@@ -44,7 +38,8 @@ pub fn schema() -> arrow::datatypes::Schema {
     arrow::datatypes::Schema::new(fields)
 }
 
-pub struct ParquetWriter<W: Write + std::marker::Send + std::io::Seek + 'static> {
+/// Struct to write Myth in parquet format
+pub struct ParquetWriter<W: std::io::Write + std::marker::Send + std::io::Seek + 'static> {
     writer: parquet::arrow::arrow_writer::ArrowWriter<W>,
     schema: std::sync::Arc<arrow::datatypes::Schema>,
     chrs: Vec<String>,
@@ -56,10 +51,12 @@ pub struct ParquetWriter<W: Write + std::marker::Send + std::io::Seek + 'static>
     gene_name: Vec<String>,
     effects: Vec<String>,
     impact: Vec<u8>,
+    block_size: usize,
 }
 
-impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
-    pub fn new(writer: W, block_size: usize) -> Result<Self> {
+impl<W: std::io::Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
+    /// Create a new ParquetWriter
+    pub fn new(writer: W, block_size: usize) -> error::Result<Self> {
         let schema = std::sync::Arc::new(schema());
 
         let columns_metadata = get_metadata();
@@ -68,7 +65,7 @@ impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
             writer,
             schema.clone(),
             Some(
-                WriterProperties::builder()
+                parquet::file::properties::WriterProperties::builder()
                     .set_key_value_metadata(Some(columns_metadata))
                     .build(),
             ),
@@ -85,12 +82,15 @@ impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
             gene_name: Vec::with_capacity(block_size),
             effects: Vec::with_capacity(block_size),
             impact: Vec::with_capacity(block_size),
+            block_size,
         })
     }
 }
 
-impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> {
-    fn add_myth(&mut self, myth: Myth) -> Result<()> {
+impl<W: std::io::Write + std::marker::Send + std::io::Seek + 'static> output::MythWriter
+    for ParquetWriter<W>
+{
+    fn add_myth(&mut self, myth: myth::Myth) -> error::Result<()> {
         for annotation in myth.annotations {
             self.chrs
                 .push(unsafe { String::from_utf8_unchecked(myth.variant.seqname.clone()) });
@@ -119,14 +119,13 @@ impl<W: Write + Send + std::io::Seek + 'static> MythWriter for ParquetWriter<W> 
     }
 
     fn batch_full(&self) -> bool {
-        self.chrs.len() == self.chrs.capacity()
+        self.chrs.len() > self.block_size
     }
-    fn finalize(&mut self) -> Result<()> {
-        let metadata = self.writer.finish()?;
-        log::info!("Done writing {} rows.", metadata.num_rows);
+    fn finalize(&mut self) -> error::Result<()> {
+        self.writer.finish()?;
         Ok(())
     }
-    fn write_batch(&mut self) -> Result<()> {
+    fn write_batch(&mut self) -> error::Result<()> {
         let batch = arrow::record_batch::RecordBatch::try_new(
             self.schema.clone(),
             vec![

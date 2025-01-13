@@ -4,8 +4,6 @@
 
 /* std use */
 
-use std::io::BufWriter;
-
 /* crate use */
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -24,25 +22,18 @@ pub mod translate;
 pub mod variant;
 pub mod variant2myth;
 
-use crate::output::writer::MythWriter;
 #[cfg(feature = "cli")]
 pub mod cli;
 
-/// Just a trait to combine Write and Seek trait
-pub trait WriteSeek: std::io::Write + std::io::Seek {}
-impl<T> WriteSeek for T where T: std::io::Write + std::io::Seek {}
-
-#[cfg(not(feature = "parallel"))]
 /// For each variants found matching annotations
-pub fn vcf2json<R>(
+#[cfg(not(feature = "parallel"))]
+pub fn vcf2myth<R>(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
-    mut vcf_reader: variant::VcfReader<R>,
+    vcf_reader: variant::VcfReader<R>,
     annotators_choices: variant2myth::AnnotatorsChoices,
-    block_size: usize,
-    output: BufWriter<Box<dyn WriteSeek + Send>>,
-    output_type: output::OutputFileType,
+    mut writer: Box<dyn output::MythWriter>,
 ) -> error::Result<()>
 where
     R: std::io::BufRead,
@@ -50,43 +41,28 @@ where
     let variant2myth =
         variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
-    let mut writer: Box<dyn MythWriter> = match output_type {
-        output::OutputFileType::Parquet => {
-            Box::new(output::parquet::ParquetWriter::new(output, block_size)?)
-        }
-        output::OutputFileType::JSON => Box::new(output::json::JsonWriter::new(output)?),
-    };
+    for result in vcf_reader {
+        let variant = result?;
 
-    let mut end = true;
-    while end {
-        for _ in 0..block_size {
-            if let Some(result) = vcf_reader.next() {
-                let variant = result?;
+        let myth = variant2myth.myth(variant);
 
-                let myth = variant2myth.myth(variant);
-
-                writer.write_myth(myth)?;
-            } else {
-                end = false;
-                break;
-            }
-        }
+        writer.write_myth(myth)?;
     }
+
     writer.close()?;
 
     Ok(())
 }
 
+/// For each variants found matching annotations
 #[cfg(feature = "parallel")]
-pub fn vcf2json<R>(
+pub fn vcf2myth<R>(
     annotations: &annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
     annotators_choices: variant2myth::AnnotatorsChoices,
-    block_size: usize,
-    output: BufWriter<Box<dyn WriteSeek + Send>>,
-    output_type: output::OutputFileType,
+    mut writer: Box<dyn output::MythWriter + std::marker::Send>,
 ) -> error::Result<()>
 where
     R: std::io::BufRead + std::marker::Send,
@@ -94,23 +70,10 @@ where
     let (tx, rx) = std::sync::mpsc::channel::<myth::Myth>();
 
     let write_thread = std::thread::spawn(move || -> error::Result<()> {
-        let mut writer: Box<dyn MythWriter> = match output_type {
-            output::OutputFileType::Parquet => {
-                Box::new(output::parquet::ParquetWriter::new(output, block_size)?)
-            }
-            output::OutputFileType::JSON => Box::new(output::json::JsonWriter::new(output)?),
-        };
-
-        'outer: loop {
-            for _ in 0..block_size {
-                if let Some(myth) = rx.iter().next() {
-                    MythWriter::write_myth(writer.as_mut(), myth)?;
-                } else {
-                    break 'outer;
-                }
-            }
+        for myth in rx {
+            writer.write_myth(myth)?;
         }
-        MythWriter::close(writer.as_mut())?;
+        writer.close()?;
         Ok(())
     });
 
@@ -131,7 +94,7 @@ where
 
     drop(tx);
 
-    write_thread.join().unwrap()?;
+    write_thread.join();
 
     Ok(())
 }

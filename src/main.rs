@@ -9,15 +9,14 @@
 use anyhow::Context as _;
 use clap::Parser as _;
 
-use variant_myth::vcf2json;
 /* project use */
 use variant_myth::annotations_db;
 use variant_myth::cli;
 use variant_myth::error;
-use variant_myth::output;
 use variant_myth::sequences_db;
 use variant_myth::translate;
 use variant_myth::variant;
+use variant_myth::vcf2myth;
 
 fn main() -> error::Result<()> {
     // parse cli
@@ -42,19 +41,13 @@ fn main() -> error::Result<()> {
     log::info!("Start annotate variant");
     let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
 
-    let output_type = crate::output::OutputFileType::Parquet;
-
-    let block_size = 1 << 13;
-
-    vcf2json(
+    vcf2myth(
         &annotations,
         &sequences,
         &translate,
         vcf_reader,
         params.annotators_choices(),
-        block_size,
-        params.output()?,
-        output_type,
+        params.output.writer()?,
     )?;
     log::info!("End annotate variant");
 

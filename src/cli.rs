@@ -9,6 +9,7 @@ use enumflags2::BitFlag as _;
 
 /* project use */
 use crate::error;
+use crate::output;
 use crate::variant2myth;
 
 fn get_reader(
@@ -48,10 +49,6 @@ pub struct Command {
     #[clap(short = 't', long = "translate")]
     translate_path: Option<std::path::PathBuf>,
 
-    /// Output path
-    #[clap(short = 'o', long = "output")]
-    output_path: std::path::PathBuf,
-
     /// [Up|Down]stream transcript distance, default: 5,000
     #[clap(short = 'd', long = "updown-distance")]
     updown_distance: Option<u64>,
@@ -59,6 +56,10 @@ pub struct Command {
     /// Select which type of annotation you want run
     #[clap(short = 'c', long = "annotators-choices")]
     annotators_choices: Vec<variant2myth::AnnotatorsChoicesRaw>,
+
+    /// Output subcommand
+    #[clap(subcommand)]
+    pub output: OutputSubCommand,
 
     // Generic option
     #[cfg(feature = "parallel")]
@@ -119,16 +120,6 @@ impl Command {
         }
     }
 
-    /// Get output writer
-    pub fn output(
-        &self,
-    ) -> error::Result<std::io::BufWriter<Box<dyn crate::WriteSeek + std::marker::Send>>> {
-        let file = std::fs::File::create(&self.output_path)?;
-        let boxed = Box::new(file);
-
-        Ok(std::io::BufWriter::new(boxed))
-    }
-
     /// Get [Up|Down]stream transcript distance
     pub fn updown_distance(&self) -> u64 {
         self.updown_distance.unwrap_or(5000)
@@ -162,5 +153,68 @@ impl Command {
     /// Get timestamp granularity
     pub fn timestamp(&self) -> stderrlog::Timestamp {
         self.ts.unwrap_or(stderrlog::Timestamp::Off)
+    }
+}
+
+/// Subcommand to control how output are write
+#[derive(clap::Subcommand, std::fmt::Debug)]
+pub enum OutputSubCommand {
+    /// Output are write in parquet format
+    Parquet(Parquet),
+    /// Output are write in json format
+    Json(Json),
+}
+
+impl OutputSubCommand {
+    /// Create myth writer
+    pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
+        match self {
+            OutputSubCommand::Parquet(obj) => obj.writer(),
+            OutputSubCommand::Json(obj) => obj.writer(),
+        }
+    }
+}
+
+/// Output are write in parquet format
+#[derive(clap::Args, std::fmt::Debug)]
+pub struct Parquet {
+    /// Output path
+    #[clap(short = 'p', long = "path")]
+    path: std::path::PathBuf,
+
+    /// Size of parquet block, default value 65536
+    #[clap(short = 'b', long = "block-size")]
+    block_size: Option<usize>,
+}
+
+impl Parquet {
+    /// Create myth writer
+    pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
+        let output = std::fs::File::create(&self.path).map(std::io::BufWriter::new)?;
+        Ok(Box::new(output::ParquetWriter::new(
+            output,
+            self.block_size(),
+        )?))
+    }
+
+    /// Get block_size
+    pub fn block_size(&self) -> usize {
+        self.block_size.unwrap_or(1 << 16)
+    }
+}
+
+/// Output are write in json format
+#[derive(clap::Args, std::fmt::Debug)]
+pub struct Json {
+    /// Output path
+    #[clap(short = 'p', long = "path")]
+    path: std::path::PathBuf,
+}
+
+impl Json {
+    /// Create myth writer
+    pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
+        let output = std::fs::File::create(&self.path).map(std::io::BufWriter::new)?;
+        Ok(Box::new(output::JsonWriter::new(output)?))
     }
 }

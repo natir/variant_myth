@@ -126,8 +126,6 @@ fn run() -> anyhow::Result<()> {
 
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
     cmd.args([
-        "-o",
-        &format!("{}", output_path.display()),
         "-i",
         &format!("{}", variant_path.display()),
         "-r",
@@ -136,6 +134,9 @@ fn run() -> anyhow::Result<()> {
         &format!("{}", annotation_path.display()),
         "-t",
         &format!("{}", translate_path.display()),
+        "parquet",
+        "-p",
+        &format!("{}", output_path.display()),
     ]);
 
     let assert = cmd.assert();
@@ -154,8 +155,6 @@ fn run_threads() -> anyhow::Result<()> {
 
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
     cmd.args([
-        "-o",
-        &format!("{}", output_path.display()),
         "--threads",
         "4",
         "-i",
@@ -166,6 +165,9 @@ fn run_threads() -> anyhow::Result<()> {
         &format!("{}", annotation_path.display()),
         "-t",
         &format!("{}", translate_path.display()),
+        "parquet",
+        "-p",
+        &format!("{}", output_path.display()),
     ]);
 
     let assert = cmd.assert();
@@ -177,7 +179,6 @@ fn run_threads() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[ignore]
 #[cfg(not(feature = "parallel"))]
 #[test]
 fn logging_updown_setup() -> anyhow::Result<()> {
@@ -194,10 +195,11 @@ fn logging_updown_setup() -> anyhow::Result<()> {
         &format!("{}", annotation_path.display()),
         "-t",
         &format!("{}", translate_path.display()),
-        "-o",
-        &format!("{}", output_path.display()),
         "-d",
         "500",
+        "parquet",
+        "-p",
+        &format!("{}", output_path.display()),
     ]);
 
     let assert = cmd.assert();
