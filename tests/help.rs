@@ -9,7 +9,12 @@
 #[cfg(not(feature = "parallel"))]
 const HELP: &[u8] = b"A variant annotater
 
-Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --annotations <ANNOTATIONS_PATH> --output <OUTPUT_PATH>
+Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --annotations <ANNOTATIONS_PATH> <COMMAND>
+
+Commands:
+  parquet  Output are write in parquet format
+  json     Output are write in json format
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -i, --input <VARIANT_PATH>
@@ -20,8 +25,6 @@ Options:
           Annotation path
   -t, --translate <TRANSLATE_PATH>
           Translate table path, if not set use human
-  -o, --output <OUTPUT_PATH>
-          Output path
   -d, --updown-distance <UPDOWN_DISTANCE>
           [Up|Down]stream transcript distance, default: 5,000
   -c, --annotators-choices <ANNOTATORS_CHOICES>
@@ -33,7 +36,7 @@ Options:
   -T, --timestamp <TS>
           Timestamp (sec, ms, ns, none)
   -h, --help
-          Print help (see more with \'--help\')
+          Print help (see more with '--help')
   -V, --version
           Print version
 ";
@@ -41,7 +44,12 @@ Options:
 #[cfg(feature = "parallel")]
 const HELP: &[u8] = b"A variant annotater
 
-Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --annotations <ANNOTATIONS_PATH> --output <OUTPUT_PATH>
+Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --annotations <ANNOTATIONS_PATH> <COMMAND>
+
+Commands:
+  parquet  Output are write in parquet format
+  json     Output are write in json format
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -i, --input <VARIANT_PATH>
@@ -52,8 +60,6 @@ Options:
           Annotation path
   -t, --translate <TRANSLATE_PATH>
           Translate table path, if not set use human
-  -o, --output <OUTPUT_PATH>
-          Output path
   -d, --updown-distance <UPDOWN_DISTANCE>
           [Up|Down]stream transcript distance, default: 5,000
   -c, --annotators-choices <ANNOTATORS_CHOICES>

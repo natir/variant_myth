@@ -16,6 +16,7 @@ use variant_myth::error;
 use variant_myth::sequences_db;
 use variant_myth::translate;
 use variant_myth::variant;
+use variant_myth::vcf2myth;
 
 fn main() -> error::Result<()> {
     // parse cli
@@ -39,13 +40,14 @@ fn main() -> error::Result<()> {
 
     log::info!("Start annotate variant");
     let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
-    variant_myth::vcf2json(
+
+    vcf2myth(
         &annotations,
         &sequences,
         &translate,
         vcf_reader,
         params.annotators_choices(),
-        params.output()?,
+        params.output.writer()?,
     )?;
     log::info!("End annotate variant");
 
