@@ -6,12 +6,23 @@
 
 /* project use */
 
+use parquet::file::properties::WriterProperties;
+
 use crate::error::Result;
 use crate::myth::Myth;
 use std::io::Write;
 use std::marker::Send;
 
 use crate::output::writer::MythWriter;
+
+fn get_metadata() -> Vec<parquet::file::metadata::KeyValue> {
+    crate::output::get_metadata()
+        .iter()
+        .map(|(k, v)| {
+            parquet::file::metadata::KeyValue::new(String::from(*k), Some(String::from(*v)))
+        })
+        .collect()
+}
 
 /// Get schema of parquet output
 pub fn schema() -> arrow::datatypes::Schema {
@@ -50,10 +61,17 @@ pub struct ParquetWriter<W: Write + std::marker::Send + std::io::Seek + 'static>
 impl<W: Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
     pub fn new(writer: W, block_size: usize) -> Result<Self> {
         let schema = std::sync::Arc::new(schema());
+
+        let columns_metadata = get_metadata();
+
         let writer = parquet::arrow::arrow_writer::ArrowWriter::try_new(
             writer,
             schema.clone(),
-            Default::default(),
+            Some(
+                WriterProperties::builder()
+                    .set_key_value_metadata(Some(columns_metadata))
+                    .build(),
+            ),
         )?;
         Ok(ParquetWriter {
             writer,
