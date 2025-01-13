@@ -83,6 +83,8 @@ impl<'a> Variant2Myth<'a> {
                 effect::Effect::ThreePrimeUtrVariant,
             ))
                 as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
+        }
+        if annotators_choices.contains(AnnotatorsChoicesRaw::Effect) {
             annotators.push(Box::new(sequence_analysis::SequenceAnalysis::new(
                 translate, sequences,
             ))
