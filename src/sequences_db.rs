@@ -67,7 +67,7 @@ impl SequencesDataBase {
     /// Get concatenation of sequence covered by annotations
     pub fn epissed(
         &self,
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         strand: annotation::Strand,
     ) -> error::Result<Vec<u8>> {
         if let Some(first) = annotations.first() {
@@ -91,7 +91,7 @@ impl SequencesDataBase {
     /// Get concatenation of sequence covered by annotations edited by variant
     pub fn epissed_edit(
         &self,
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         strand: annotation::Strand,
         variant: &variant::Variant,
     ) -> error::Result<Vec<u8>> {
@@ -129,7 +129,7 @@ impl SequencesDataBase {
     /// Get coding sequence covered by annotations
     pub fn coding(
         &self,
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         strand: annotation::Strand,
         mut start_position: std::option::Option<u64>,
         mut stop_position: std::option::Option<u64>,
@@ -164,7 +164,7 @@ impl SequencesDataBase {
     /// Get coding sequence covered by annotations edited by variant
     pub fn coding_edit(
         &self,
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         strand: annotation::Strand,
         variant: &variant::Variant,
         mut start_position: std::option::Option<u64>,
@@ -213,7 +213,7 @@ impl SequencesDataBase {
     fn coding_internal(
         &self,
         seqname: &[u8],
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         start: u64,
         stop: u64,
         mut variant_pos: u64,
@@ -350,18 +350,12 @@ mod tests {
 
         assert_eq!(
             b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.epissed(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                annotation::Strand::Forward
-            )?
+            seqdb.epissed(&annotations, annotation::Strand::Forward)?
         );
 
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
-            seqdb.epissed(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                annotation::Strand::Reverse
-            )?
+            seqdb.epissed(&annotations, annotation::Strand::Reverse)?
         );
 
         Ok(())
@@ -377,20 +371,12 @@ mod tests {
 
         assert_eq!(
             b"ATGACCgggCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.epissed_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                annotation::Strand::Forward,
-                &variant,
-            )?
+            seqdb.epissed_edit(&annotations, annotation::Strand::Forward, &variant,)?
         );
 
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGcccGGTCAT".to_vec(),
-            seqdb.epissed_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                annotation::Strand::Reverse,
-                &variant,
-            )?
+            seqdb.epissed_edit(&annotations, annotation::Strand::Reverse, &variant,)?
         );
 
         Ok(())
@@ -409,18 +395,13 @@ mod tests {
 
         assert_eq!(
             b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.coding(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                annotation::Strand::Forward,
-                None,
-                None,
-            )?
+            seqdb.coding(&annotations, annotation::Strand::Forward, None, None,)?
         );
 
         assert_eq!(
             b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
             seqdb.coding(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Forward,
                 start_forward,
                 None,
@@ -430,7 +411,7 @@ mod tests {
         assert_eq!(
             b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Forward,
                 start_forward,
                 stop_forward,
@@ -439,18 +420,13 @@ mod tests {
 
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
-            seqdb.coding(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
-                annotation::Strand::Reverse,
-                None,
-                None,
-            )?
+            seqdb.coding(&annotations, annotation::Strand::Reverse, None, None,)?
         );
 
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
             seqdb.coding(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Reverse,
                 start_reverse,
                 None,
@@ -460,7 +436,7 @@ mod tests {
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Reverse,
                 start_reverse,
                 stop_reverse,
@@ -485,7 +461,7 @@ mod tests {
         assert_eq!(
             b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Forward,
                 &forward_before,
                 start_forward,
@@ -497,7 +473,7 @@ mod tests {
         assert_eq!(
             b"ATGCAtAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Forward,
                 &forward_in,
                 start_forward,
@@ -509,7 +485,7 @@ mod tests {
         assert_eq!(
             b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Forward,
                 &forward_after,
                 start_forward,
@@ -521,7 +497,7 @@ mod tests {
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Reverse,
                 &reverse_before,
                 start_reverse,
@@ -533,7 +509,7 @@ mod tests {
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATAcGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Reverse,
                 &reverse_in,
                 start_reverse,
@@ -545,7 +521,7 @@ mod tests {
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
-                &annotations.iter().collect::<Vec<&annotation::Annotation>>(),
+                &annotations,
                 annotation::Strand::Reverse,
                 &reverse_before,
                 start_reverse,
@@ -565,7 +541,7 @@ mod tests {
         assert_eq!(
             b"ATGACCGCCATGCAAAGGCTCACTGGG".to_vec(),
             seqdb.coding(
-                &[&annotations[0]],
+                &[annotations[0].clone()],
                 annotation::Strand::Forward,
                 //&forward_in,
                 None,
@@ -577,7 +553,7 @@ mod tests {
         assert_eq!(
             b"ATGACCGCCATGCAtAGGCTCACTGGG".to_vec(),
             seqdb.coding_edit(
-                &[&annotations[0]],
+                &[annotations[0].clone()],
                 annotation::Strand::Forward,
                 &variant,
                 None,

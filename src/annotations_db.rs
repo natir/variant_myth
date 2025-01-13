@@ -12,10 +12,11 @@ const DOMAIN_NUMBER: usize = 128;
 
 /// Store annotations information associate to intervals
 pub struct AnnotationsDataBase {
-    intervals: ahash::AHashMap<
+    transcripts_intervals: ahash::AHashMap<
         Vec<u8>,
         clairiere::InterpolateTree<u64, annotation::Annotation, DOMAIN_NUMBER>,
     >,
+    transcripts2other: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>>,
 }
 
 impl AnnotationsDataBase {
@@ -28,6 +29,9 @@ impl AnnotationsDataBase {
             Vec<u8>,
             Vec<clairiere::Node<u64, annotation::Annotation>>,
         > = ahash::AHashMap::new();
+
+        let mut transcripts2other: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>> =
+            ahash::AHashMap::new();
 
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'\t')
@@ -47,48 +51,69 @@ impl AnnotationsDataBase {
             let seqname = annotation.get_seqname();
             let interval = annotation.get_interval();
 
-            intervals_builder
-                .entry(seqname.to_vec())
-                .and_modify(
-                    |tree: &mut Vec<clairiere::Node<u64, annotation::Annotation>>| {
-                        Self::add_annotion(
-                            tree,
-                            interval.clone(),
-                            annotation.clone(),
-                            updown_distance,
-                        );
-                    },
-                )
-                .or_insert({
-                    let mut tree = Vec::new();
+            match annotation.get_feature() {
+                b"transcript" | b"gene" => {
+                    intervals_builder
+                        .entry(seqname.to_vec())
+                        .and_modify(
+                            |tree: &mut Vec<clairiere::Node<u64, annotation::Annotation>>| {
+                                Self::add_annotion(
+                                    tree,
+                                    interval.clone(),
+                                    annotation.clone(),
+                                    updown_distance,
+                                );
+                            },
+                        )
+                        .or_insert({
+                            let mut tree = Vec::new();
 
-                    Self::add_annotion(&mut tree, interval, annotation, updown_distance);
-                    tree
-                });
+                            Self::add_annotion(&mut tree, interval, annotation, updown_distance);
+                            tree
+                        });
+                }
+                _ => {
+                    if !transcripts2other.contains_key(annotation.get_parent()) {
+                        transcripts2other.insert(annotation.get_parent().to_vec(), Vec::new());
+                    }
+                    transcripts2other
+                        .get_mut(annotation.get_parent())
+                        .unwrap() // we check previoulsy
+                        .push(annotation);
+                }
+            }
         }
 
-        let mut intervals: ahash::AHashMap<
+        let mut transcripts_intervals: ahash::AHashMap<
             Vec<u8>,
             clairiere::InterpolateTree<u64, annotation::Annotation, DOMAIN_NUMBER>,
         > = ahash::AHashMap::with_capacity(intervals_builder.len());
         for (key, values) in intervals_builder.drain() {
-            intervals.insert(key, clairiere::InterpolateTree::new(values.clone()));
+            transcripts_intervals.insert(key, clairiere::InterpolateTree::new(values.clone()));
         }
 
-        Ok(Self { intervals })
+        Ok(Self {
+            transcripts_intervals,
+            transcripts2other,
+        })
     }
 
-    /// Get annotation match with seqname and interval
-    pub fn get_annotation(
+    /// Get gene and transcript match with seqname and interval
+    pub fn get_annotations(
         &self,
         seqname: &[u8],
         interval: core::ops::Range<u64>,
     ) -> Vec<&annotation::Annotation> {
-        if let Some(chr) = self.intervals.get(seqname) {
+        if let Some(chr) = self.transcripts_intervals.get(seqname) {
             chr.overlap(interval.start, interval.end)
         } else {
             vec![]
         }
+    }
+
+    /// Get sub annotation present in gene transcript
+    pub fn get_subannotations(&self, id: &[u8]) -> Option<&Vec<annotation::Annotation>> {
+        self.transcripts2other.get(id)
     }
 
     /// Add annotation
@@ -151,7 +176,7 @@ mod tests {
         ))?;
 
         let b2 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[77..191].to_vec())
+            String::from_utf8(file[77..197].to_vec())
                 .unwrap()
                 .split('\t')
                 .map(|s| s.to_string())
@@ -159,7 +184,7 @@ mod tests {
         ))?;
 
         let b3 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[192..285].to_vec())
+            String::from_utf8(file[198..291].to_vec())
                 .unwrap()
                 .split('\t')
                 .map(|s| s.to_string())
@@ -167,32 +192,38 @@ mod tests {
         ))?;
 
         let b4 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[286..368].to_vec())
+            String::from_utf8(file[292..374].to_vec())
                 .unwrap()
                 .split('\t')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>(),
         ))?;
 
-        let mut truth = vec![&b1, &b2, &b3, &b4];
+        let mut truth = vec![&b1, &b2];
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
-        for annot in &truth {
-            println!("truth: {}", annot);
-        }
 
         let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(file));
         let annotations = AnnotationsDataBase::from_reader(std::io::BufReader::new(reader), 100)?;
 
-        let mut result = annotations.get_annotation(b"chr1", 840..841);
+        let mut result = annotations.get_annotations(b"chr1", 840..841);
         result.sort_by_key(|a| (a.get_start(), a.get_stop()));
-        for annot in &result {
-            println!("result: {}", annot);
-        }
         assert_eq!(result, truth);
+
+        let mut truth = vec![b3, b4];
+        truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
+
+        let result = annotations
+            .get_subannotations(result[1].get_attribute().get_id())
+            .unwrap();
+        let mut value = result.clone();
+        value.sort_by_key(|a| (a.get_start(), a.get_stop()));
+        value = value[..2].to_vec();
+
+        assert_eq!(value, truth);
 
         // seqname not present
         assert_eq!(
-            annotations.get_annotation(b"chrX", 2300..2301),
+            annotations.get_annotations(b"chrX", 2300..2301),
             Vec::<&annotation::Annotation>::new()
         );
 

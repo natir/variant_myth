@@ -40,7 +40,7 @@ pub type AnnotatorsChoices = enumflags2::BitFlags<AnnotatorsChoicesRaw>;
 trait Annotator {
     fn annotate(
         &self,
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         variant: &variant::Variant,
     ) -> Vec<effect::Effect>;
 }
@@ -105,7 +105,7 @@ impl<'a> Variant2Myth<'a> {
 
         let annotations = self
             .annotations
-            .get_annotation(&variant.seqname, variant.get_interval());
+            .get_annotations(&variant.seqname, variant.get_interval());
 
         if annotations.is_empty() {
             myth.add_annotation(
@@ -120,35 +120,22 @@ impl<'a> Variant2Myth<'a> {
             return myth;
         }
 
-        let mut transcript2annotations: ahash::AHashMap<
-            (Vec<u8>, Vec<u8>),
-            Vec<&annotation::Annotation>,
-        > = ahash::AHashMap::new();
-
         for transcript in annotations
             .iter()
             .filter(|&&x| x.get_feature() == b"transcript")
         {
-            for annotation in self
+            let annotations = if let Some(a) = self
                 .annotations
-                .get_annotation(&variant.seqname, transcript.get_interval())
+                .get_subannotations(transcript.get_attribute().get_id())
             {
-                let key = (
-                    annotation.get_source().to_vec(),
-                    annotation.get_parent().to_vec(),
-                );
+                a
+            } else {
+                continue;
+            };
 
-                transcript2annotations
-                    .entry(key)
-                    .and_modify(|x| x.push(annotation))
-                    .or_insert(vec![annotation]);
-            }
-        }
-
-        for (key, annotations) in transcript2annotations {
             let mut transcript_myth = myth::AnnotationMyth::builder()
-                .source(key.0)
-                .transcript_id(key.1)
+                .source(transcript.get_source().to_vec())
+                .transcript_id(transcript.get_attribute().get_id().to_vec())
                 .effects(vec![]);
 
             let gene_name = annotations
@@ -161,7 +148,7 @@ impl<'a> Variant2Myth<'a> {
             transcript_myth = transcript_myth.gene_name(gene_name);
 
             for annotator in &self.annotators[..] {
-                transcript_myth.extend_effect(&annotator.annotate(&annotations, &variant))
+                transcript_myth.extend_effect(&annotator.annotate(annotations, &variant))
             }
 
             myth.add_annotation(transcript_myth.build().unwrap());

@@ -248,7 +248,7 @@ mod tests {
 
     pub const GFF: &[u8] =
         b"{0}	ensembl_havana	gene	445	4439	.	+	.	ID=gene:ENSG00000112473;Name=SLC39A7
-{0}	ensembl_havana	mRNA	826	4439	.	+	.	ID=transcript:ENST00000374675;Parent=gene:ENSG00000112473;Name=SLC39A7-201
+{0}	ensembl_havana	transcript	826	4439	.	+	.	ID=transcript:ENST00000374675;Parent=gene:ENSG00000112473;Name=SLC39A7-201
 {0}	ensembl_havana	exon	826	938	.	+	.	Parent=transcript:ENST00000374675;Name=ENSE00001746858
 {0}	ensembl_havana	five_prime_UTR	826	938	.	+	.	Parent=transcript:ENST00000374675
 {0}	ensembl_havana	five_prime_UTR	1242	1245	.	+	.	Parent=transcript:ENST00000374675

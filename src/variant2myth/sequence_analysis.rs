@@ -32,24 +32,24 @@ impl<'a> SequenceAnalysis<'a> {
 impl variant2myth::Annotator for SequenceAnalysis<'_> {
     fn annotate(
         &self,
-        annotations: &[&annotation::Annotation],
+        annotations: &[annotation::Annotation],
         variant: &variant::Variant,
     ) -> Vec<effect::Effect> {
         let start_position = annotations
             .iter()
-            .find(|&&x| x.get_feature() == b"start_codon")
+            .find(|&x| x.get_feature() == b"start_codon")
             .map(|x| x.get_start());
 
         let stop_position = annotations
             .iter()
-            .find(|&&x| x.get_feature() == b"stop_codon")
+            .find(|&x| x.get_feature() == b"stop_codon")
             .map(|x| x.get_stop());
 
         let exon_annot = annotations
             .iter()
             .filter(|a| a.get_feature() == b"exon")
             .cloned()
-            .collect::<Vec<&annotation::Annotation>>();
+            .collect::<Vec<annotation::Annotation>>();
 
         let strand = annotations
             .first()
