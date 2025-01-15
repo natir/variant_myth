@@ -15,12 +15,15 @@ pub struct AnnotationMyth {
     /// Source of annotation
     pub source: Vec<u8>,
 
-    /// Transcript id
-    pub transcript_id: Vec<u8>,
+    /// Feature type
+    pub feature: Vec<u8>,
+
+    /// Feature id
+    pub id: Vec<u8>,
 
     #[builder(default)]
-    /// Gene name
-    pub gene_name: Vec<u8>,
+    /// Feature name
+    pub name: Vec<u8>,
 
     /// Store effect of this variants
     pub effects: Vec<effect::Effect>,
@@ -106,19 +109,24 @@ mod tests {
     fn annotation_myth() {
         let annotation = AnnotationMyth::builder()
             .source(b"test".to_vec())
-            .transcript_id(b"gene1".to_vec())
+            .feature(b"gene".to_vec())
+            .name(b"gene1".to_vec())
+            .id(b"1111".to_vec())
             .effects(vec![])
             .build()
             .unwrap();
 
         assert_eq!(annotation.source, b"test".to_vec());
-        assert_eq!(annotation.transcript_id, b"gene1".to_vec());
-        assert_eq!(annotation.gene_name, Vec::<u8>::new());
+        assert_eq!(annotation.feature, b"gene".to_vec());
+        assert_eq!(annotation.name, b"gene1".to_vec());
+        assert_eq!(annotation.id, b"1111".to_vec());
         assert_eq!(annotation.effects, Vec::<effect::Effect>::new());
 
         let mut annotation = AnnotationMyth::builder()
             .source(b"test".to_vec())
-            .transcript_id(b"gene1".to_vec());
+            .feature(b"gene".to_vec())
+            .name(b"gene1".to_vec())
+            .id(b"11111".to_vec());
 
         annotation.add_effect(effect::Effect::GeneVariant);
         annotation.add_effect(effect::Effect::ExonRegion);
@@ -127,8 +135,9 @@ mod tests {
             annotation.build().unwrap(),
             AnnotationMyth {
                 source: b"test".to_vec(),
-                transcript_id: b"gene1".to_vec(),
-                gene_name: b"".to_vec(),
+                feature: b"gene".to_vec(),
+                name: b"gene1".to_vec(),
+                id: b"11111".to_vec(),
                 effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion],
                 impact: effect::Impact::Modifier,
             }
@@ -136,7 +145,9 @@ mod tests {
 
         let mut annotation = AnnotationMyth::builder()
             .source(b"test".to_vec())
-            .transcript_id(b"gene1".to_vec());
+            .feature(b"gene".to_vec())
+            .name(b"gene1".to_vec())
+            .id(b"1111".to_vec());
 
         annotation.extend_effect(&[effect::Effect::GeneVariant, effect::Effect::ExonRegion]);
 
@@ -144,8 +155,9 @@ mod tests {
             annotation.build().unwrap(),
             AnnotationMyth {
                 source: b"test".to_vec(),
-                transcript_id: b"gene1".to_vec(),
-                gene_name: b"".to_vec(),
+                feature: b"gene".to_vec(),
+                name: b"gene1".to_vec(),
+                id: b"1111".to_vec(),
                 effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion],
                 impact: effect::Impact::Modifier,
             }
@@ -156,7 +168,9 @@ mod tests {
     fn myth() {
         let mut annotation = AnnotationMyth::builder()
             .source(b"test".to_vec())
-            .transcript_id(b"gene1".to_vec());
+            .feature(b"gene".to_vec())
+            .name(b"gene1".to_vec())
+            .id(b"1111".to_vec());
 
         annotation.add_effect(effect::Effect::GeneVariant);
         annotation.add_effect(effect::Effect::ExonRegion);
@@ -181,8 +195,9 @@ mod tests {
                 },
                 annotations: vec![AnnotationMyth {
                     source: b"test".to_vec(),
-                    transcript_id: b"gene1".to_vec(),
-                    gene_name: b"".to_vec(),
+                    feature: b"gene".to_vec(),
+                    name: b"gene1".to_vec(),
+                    id: b"1111".to_vec(),
                     effects: vec![effect::Effect::GeneVariant, effect::Effect::ExonRegion],
                     impact: effect::Impact::Modifier
                 }]
