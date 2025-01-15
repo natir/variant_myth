@@ -19,12 +19,25 @@ pub use parquet::ParquetWriter;
 /// Common metadata to all output
 pub fn get_metadata() -> Vec<(&'static str, &'static str)> {
     vec![
+        ("chr", "chromosome name same ase original vcf"),
+        ("pos", "position of variant"),
+        ("ref", "reference sequence"),
+        ("alt", "alternative sequence"),
+        ("source", "source of variant in gff3 file"),
+        (
+            "feature",
+            "type of feature affected by variant gene/transcript",
+        ),
+        (
+            "name",
+            "name of feature, same value of Name gff3 attributes",
+        ),
+        ("id", "id of feature, same value of Id gff3 attributes"),
+        ("effect", "List of sequence ontology terms"),
         (
             "impact",
             "0: UNKOWN, 1:LOW, 2:MODIFIER, 3: MODERATE, 4:HIGH",
         ),
-        ("effect", "List of sequence ontology terms"),
-        ("gene_name", "HUGO symbol of affected gene"),
     ]
 }
 

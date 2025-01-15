@@ -29,8 +29,9 @@ pub fn schema() -> arrow::datatypes::Schema {
 
     fields.extend(vec![
         arrow::datatypes::Field::new("source", arrow::datatypes::DataType::Utf8, true),
-        arrow::datatypes::Field::new("transcript_id", arrow::datatypes::DataType::Utf8, true),
-        arrow::datatypes::Field::new("gene_name", arrow::datatypes::DataType::Utf8, true),
+        arrow::datatypes::Field::new("feature", arrow::datatypes::DataType::Utf8, true),
+        arrow::datatypes::Field::new("name", arrow::datatypes::DataType::Utf8, true),
+        arrow::datatypes::Field::new("id", arrow::datatypes::DataType::Utf8, true),
         arrow::datatypes::Field::new("effects", arrow::datatypes::DataType::Utf8, true),
         arrow::datatypes::Field::new("impact", arrow::datatypes::DataType::UInt8, true),
     ]);
@@ -47,8 +48,9 @@ pub struct ParquetWriter<W: std::io::Write + std::marker::Send + std::io::Seek +
     refs: Vec<String>,
     alts: Vec<String>,
     source: Vec<String>,
-    transcript_id: Vec<String>,
-    gene_name: Vec<String>,
+    feature: Vec<String>,
+    name: Vec<String>,
+    id: Vec<String>,
     effects: Vec<String>,
     impact: Vec<u8>,
     block_size: usize,
@@ -78,8 +80,9 @@ impl<W: std::io::Write + Send + std::io::Seek + 'static> ParquetWriter<W> {
             refs: Vec::with_capacity(block_size),
             alts: Vec::with_capacity(block_size),
             source: Vec::with_capacity(block_size),
-            transcript_id: Vec::with_capacity(block_size),
-            gene_name: Vec::with_capacity(block_size),
+            feature: Vec::with_capacity(block_size),
+            name: Vec::with_capacity(block_size),
+            id: Vec::with_capacity(block_size),
             effects: Vec::with_capacity(block_size),
             impact: Vec::with_capacity(block_size),
             block_size,
@@ -101,10 +104,12 @@ impl<W: std::io::Write + std::marker::Send + std::io::Seek + 'static> output::My
                 .push(unsafe { String::from_utf8_unchecked(myth.variant.alt_seq.clone()) });
             self.source
                 .push(unsafe { String::from_utf8_unchecked(annotation.source) });
-            self.transcript_id
-                .push(unsafe { String::from_utf8_unchecked(annotation.transcript_id) });
-            self.gene_name
-                .push(unsafe { String::from_utf8_unchecked(annotation.gene_name) });
+            self.feature
+                .push(unsafe { String::from_utf8_unchecked(annotation.feature) });
+            self.name
+                .push(unsafe { String::from_utf8_unchecked(annotation.name) });
+            self.id
+                .push(unsafe { String::from_utf8_unchecked(annotation.id) });
             self.effects.push(
                 annotation
                     .effects
@@ -145,10 +150,13 @@ impl<W: std::io::Write + std::marker::Send + std::io::Seek + 'static> output::My
                     &mut self.source,
                 ))),
                 std::sync::Arc::new(arrow::array::StringArray::from(std::mem::take(
-                    &mut self.transcript_id,
+                    &mut self.feature,
                 ))),
                 std::sync::Arc::new(arrow::array::StringArray::from(std::mem::take(
-                    &mut self.gene_name,
+                    &mut self.name,
+                ))),
+                std::sync::Arc::new(arrow::array::StringArray::from(std::mem::take(
+                    &mut self.id,
                 ))),
                 std::sync::Arc::new(arrow::array::StringArray::from(std::mem::take(
                     &mut self.effects,

@@ -94,9 +94,7 @@ where
 
     drop(tx);
 
-    write_thread.join();
-
-    Ok(())
+    write_thread.join().unwrap() // Err only if panic! if write thread panic all should panic !
 }
 
 #[cfg(test)]

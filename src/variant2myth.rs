@@ -3,7 +3,6 @@
 /* std use */
 
 /* crate use */
-use bstr::ByteSlice as _;
 
 /* module declaration */
 mod feature_presence;
@@ -49,6 +48,7 @@ trait Annotator {
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
     annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>,
+    annotators_choices: AnnotatorsChoices,
 }
 
 impl<'a> Variant2Myth<'a> {
@@ -84,6 +84,7 @@ impl<'a> Variant2Myth<'a> {
             ))
                 as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
         }
+
         if annotators_choices.contains(AnnotatorsChoicesRaw::Effect) {
             annotators.push(Box::new(sequence_analysis::SequenceAnalysis::new(
                 translate, sequences,
@@ -94,6 +95,7 @@ impl<'a> Variant2Myth<'a> {
         Self {
             annotations,
             annotators,
+            annotators_choices,
         }
     }
 
@@ -113,7 +115,9 @@ impl<'a> Variant2Myth<'a> {
             myth.add_annotation(
                 myth::AnnotationMyth::builder()
                     .source(b"variant_myth".to_vec())
-                    .transcript_id(vec![])
+                    .feature(b"unknow".to_vec())
+                    .id(b"".to_vec())
+                    .name(b"".to_vec())
                     .effects(vec![effect::Effect::IntergenicRegion])
                     .build()
                     .unwrap(), // No possible error in build
@@ -122,38 +126,52 @@ impl<'a> Variant2Myth<'a> {
             return myth;
         }
 
-        for transcript in annotations
-            .iter()
-            .filter(|&&x| x.get_feature() == b"transcript")
-        {
-            let annotations = if let Some(a) = self
-                .annotations
-                .get_subannotations(transcript.get_attribute().get_id())
-            {
-                a
-            } else {
-                continue;
-            };
+        if self.annotators_choices.contains(AnnotatorsChoicesRaw::Gene) {
+            for gene in annotations.iter().filter(|&&x| x.get_feature() == b"gene") {
+                let gene_myth = myth::AnnotationMyth::builder()
+                    .source(gene.get_source().to_vec())
+                    .feature(gene.get_feature().to_vec())
+                    .id(gene.get_attribute().get_id().to_vec())
+                    .name(gene.get_attribute().get_name().to_vec())
+                    .effects(vec![]);
 
-            let mut transcript_myth = myth::AnnotationMyth::builder()
-                .source(transcript.get_source().to_vec())
-                .transcript_id(transcript.get_attribute().get_id().to_vec())
-                .effects(vec![]);
-
-            let gene_name = annotations
-                .iter()
-                .filter(|a| a.get_feature().contains_str("gene"))
-                .map(|a| a.get_attribute().get_id())
-                .collect::<Vec<&[u8]>>()
-                .join(&b';');
-
-            transcript_myth = transcript_myth.gene_name(gene_name);
-
-            for annotator in &self.annotators[..] {
-                transcript_myth.extend_effect(&annotator.annotate(annotations, &variant))
+                myth.add_annotation(gene_myth.build().unwrap()); // build can't failled
             }
+        }
 
-            myth.add_annotation(transcript_myth.build().unwrap());
+        if self
+            .annotators_choices
+            .contains(AnnotatorsChoicesRaw::Feature)
+            || self
+                .annotators_choices
+                .contains(AnnotatorsChoicesRaw::Effect)
+        {
+            for transcript in annotations
+                .iter()
+                .filter(|&&x| x.get_feature() == b"transcript")
+            {
+                let annotations = if let Some(a) = self
+                    .annotations
+                    .get_subannotations(transcript.get_attribute().get_id())
+                {
+                    a
+                } else {
+                    continue;
+                };
+
+                let mut transcript_myth = myth::AnnotationMyth::builder()
+                    .source(transcript.get_source().to_vec())
+                    .feature(transcript.get_feature().to_vec())
+                    .id(transcript.get_attribute().get_id().to_vec())
+                    .name(transcript.get_attribute().get_name().to_vec())
+                    .effects(vec![]);
+
+                for annotator in &self.annotators[..] {
+                    transcript_myth.extend_effect(&annotator.annotate(annotations, &variant))
+                }
+
+                myth.add_annotation(transcript_myth.build().unwrap()); // build can't failled
+            }
         }
 
         myth
