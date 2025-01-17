@@ -13,6 +13,7 @@ use crate::error;
 use crate::myth;
 
 /* reexport */
+pub use json::JsonFormat;
 pub use json::JsonWriter;
 pub use parquet::ParquetWriter;
 

@@ -25,6 +25,14 @@ pub mod variant2myth;
 #[cfg(feature = "cli")]
 pub mod cli;
 
+fn serialize_bstr<T, S>(v: T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    T: AsRef<[u8]>,
+    S: serde::Serializer,
+{
+    serializer.serialize_str(unsafe { std::str::from_utf8_unchecked(v.as_ref()) })
+}
+
 /// For each variants found matching annotations
 #[cfg(not(feature = "parallel"))]
 pub fn vcf2myth<R>(

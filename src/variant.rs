@@ -7,19 +7,22 @@
 /* project use */
 use crate::error;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, serde::Serialize)]
 /// Store Variant content
 pub struct Variant {
     /// Sequence name associate with variant
+    #[serde(serialize_with = "crate::serialize_bstr")]
     pub seqname: Vec<u8>,
 
     /// Position of the variant
     pub position: u64,
 
     /// Reference sequence associate with variant
+    #[serde(serialize_with = "crate::serialize_bstr")]
     pub ref_seq: Vec<u8>,
 
     /// Alternative sequence associate with variant
+    #[serde(serialize_with = "crate::serialize_bstr")]
     pub alt_seq: Vec<u8>,
 }
 

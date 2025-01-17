@@ -209,12 +209,23 @@ pub struct Json {
     /// Output path
     #[clap(short = 'p', long = "path")]
     path: std::path::PathBuf,
+
+    /// Json format
+    #[clap(short = 'f', long = "format")]
+    json_format: Option<output::JsonFormat>,
 }
 
 impl Json {
     /// Create myth writer
     pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
         let output = std::fs::File::create(&self.path).map(std::io::BufWriter::new)?;
-        Ok(Box::new(output::JsonWriter::new(output)?))
+        Ok(Box::new(output::JsonWriter::new(
+            output,
+            if let Some(f) = self.json_format.clone() {
+                f
+            } else {
+                output::JsonFormat::NdJson
+            },
+        )?))
     }
 }
