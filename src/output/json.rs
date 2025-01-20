@@ -30,11 +30,9 @@ enum WriteState {
 pub enum JsonFormat {
     /// Standard JSON, comma-delimited, with opening and closing brackets
     #[default]
-    #[clap(name = "json")]
     Json,
 
     /// Newline-delimited JSON
-    #[clap(name = "nd-json")]
     NdJson,
 }
 
