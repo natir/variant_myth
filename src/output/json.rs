@@ -3,9 +3,6 @@
 /* std use */
 
 /* crate use */
-
-use std::collections::BTreeMap;
-
 use serde_json::json;
 
 /* project use */
@@ -38,7 +35,7 @@ pub enum JsonFormat {
 }
 
 fn get_metadata() -> serde_json::Value {
-    let mut map = BTreeMap::new();
+    let mut map = std::collections::BTreeMap::new();
     for (k, v) in crate::output::get_metadata() {
         map.entry(k).or_insert(v);
     }
@@ -76,11 +73,10 @@ impl<W: std::io::Write> output::MythWriter for JsonWriter<W> {
                 "myth": &myth.annotations
             }
         );
-        let separator = match self.write_state {
-            WriteState::WroteMetadata => "".to_string(),
-            WriteState::WroteRecord if self.json_format == JsonFormat::Json => ",\n".to_string(),
-            WriteState::WroteRecord if self.json_format == JsonFormat::NdJson => "\n".to_string(),
-            _ => unreachable!(),
+        let separator = match (&self.write_state, &self.json_format) {
+            (WriteState::WroteMetadata, _) => "".to_string(),
+            (WriteState::WroteRecord, JsonFormat::Json) => ",\n".to_string(),
+            (WriteState::WroteRecord, JsonFormat::NdJson) => "\n".to_string(),
         };
         match self.json_format {
             JsonFormat::Json => {
