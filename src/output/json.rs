@@ -51,15 +51,15 @@ impl<W: std::io::Write> JsonWriter<W> {
     pub fn new(mut output_stream: W, json_format: JsonFormat) -> error::Result<Self> {
         let metadata_repr = json!(get_metadata());
         if json_format == JsonFormat::Json {
-            output_stream.write(format!("{{\n\"metadata\":\n{:#}", metadata_repr).as_bytes())?;
+            output_stream.write_fmt(format_args!("{{\n\"metadata\":\n{:#}", metadata_repr))?;
         } else {
-            output_stream.write(format!("{{\"metadata\":{}}}", metadata_repr).as_bytes())?;
+            output_stream.write_fmt(format_args!("{{\"metadata\":{}}}", metadata_repr))?;
         }
         if json_format == JsonFormat::Json {
-            output_stream.write(b",\n\"variants\": [\n")?;
+            output_stream.write_all(b",\n\"variants\": [\n")?;
         }
         if json_format == JsonFormat::NdJson {
-            output_stream.write(b"\n")?;
+            output_stream.write_all(b"\n")?;
         }
         Ok(Self {
             output_stream,
@@ -86,11 +86,11 @@ impl<W: std::io::Write> output::MythWriter for JsonWriter<W> {
         match self.json_format {
             JsonFormat::Json => {
                 self.output_stream
-                    .write(format!("{}{:#}", separator, &myth_repr).as_bytes())?;
+                    .write_fmt(format_args!("{}{:#}", separator, &myth_repr))?;
             }
             JsonFormat::NdJson => {
                 self.output_stream
-                    .write(format!("{}{}", separator, &myth_repr).as_bytes())?;
+                    .write_fmt(format_args!("{}{}", separator, &myth_repr))?;
             }
         }
         self.write_state = match self.write_state {
@@ -104,7 +104,7 @@ impl<W: std::io::Write> output::MythWriter for JsonWriter<W> {
     }
     fn finalize(&mut self) -> error::Result<()> {
         if self.json_format == JsonFormat::Json {
-            self.output_stream.write(b"]\n}")?;
+            self.output_stream.write_all(b"]\n}")?;
         } else {
             // Do nothing
         }
