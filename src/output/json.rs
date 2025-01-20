@@ -26,7 +26,8 @@ enum WriteState {
 }
 
 /// Choose output JSON format
-#[derive(Debug, Clone, Default, PartialEq, clap::ValueEnum)]
+#[derive(Debug, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 pub enum JsonFormat {
     /// Standard JSON, comma-delimited, with opening and closing brackets
     #[default]
