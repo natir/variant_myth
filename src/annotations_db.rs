@@ -3,19 +3,15 @@
 /* std use */
 
 /* crate use */
+use coitrees::IntervalTree as _;
 
 /* project use */
 use crate::annotation;
 use crate::error;
 
-const DOMAIN_NUMBER: usize = 128;
-
 /// Store annotations information associate to intervals
 pub struct AnnotationsDataBase {
-    transcripts_intervals: ahash::AHashMap<
-        Vec<u8>,
-        clairiere::InterpolateTree<u64, annotation::Annotation, DOMAIN_NUMBER>,
-    >,
+    transcripts_intervals: ahash::AHashMap<Vec<u8>, coitrees::COITree<annotation::Annotation, u32>>,
     transcripts2other: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>>,
 }
 
@@ -27,7 +23,7 @@ impl AnnotationsDataBase {
     ) -> error::Result<Self> {
         let mut intervals_builder: ahash::AHashMap<
             Vec<u8>,
-            Vec<clairiere::Node<u64, annotation::Annotation>>,
+            Vec<coitrees::Interval<annotation::Annotation>>,
         > = ahash::AHashMap::new();
 
         let mut transcripts2other: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>> =
@@ -55,16 +51,14 @@ impl AnnotationsDataBase {
                 b"transcript" | b"gene" => {
                     intervals_builder
                         .entry(seqname.to_vec())
-                        .and_modify(
-                            |tree: &mut Vec<clairiere::Node<u64, annotation::Annotation>>| {
-                                Self::add_annotion(
-                                    tree,
-                                    interval.clone(),
-                                    annotation.clone(),
-                                    updown_distance,
-                                );
-                            },
-                        )
+                        .and_modify(|tree| {
+                            Self::add_annotion(
+                                tree,
+                                interval.clone(),
+                                annotation.clone(),
+                                updown_distance,
+                            );
+                        })
                         .or_insert({
                             let mut tree = Vec::new();
 
@@ -86,10 +80,10 @@ impl AnnotationsDataBase {
 
         let mut transcripts_intervals: ahash::AHashMap<
             Vec<u8>,
-            clairiere::InterpolateTree<u64, annotation::Annotation, DOMAIN_NUMBER>,
+            coitrees::COITree<annotation::Annotation, u32>,
         > = ahash::AHashMap::with_capacity(intervals_builder.len());
         for (key, values) in intervals_builder.drain() {
-            transcripts_intervals.insert(key, clairiere::InterpolateTree::new(values.clone()));
+            transcripts_intervals.insert(key, coitrees::COITree::new(&values));
         }
 
         Ok(Self {
@@ -103,9 +97,15 @@ impl AnnotationsDataBase {
         &self,
         seqname: &[u8],
         interval: core::ops::Range<u64>,
-    ) -> Vec<&annotation::Annotation> {
+    ) -> Vec<annotation::Annotation> {
         if let Some(chr) = self.transcripts_intervals.get(seqname) {
-            chr.overlap(interval.start, interval.end)
+            let mut result = Vec::new();
+
+            chr.query(interval.start as i32, interval.end as i32, |obj| {
+                result.push(obj.metadata.clone())
+            });
+
+            result
         } else {
             vec![]
         }
@@ -118,7 +118,7 @@ impl AnnotationsDataBase {
 
     /// Add annotation
     fn add_annotion(
-        tree: &mut Vec<clairiere::Node<u64, annotation::Annotation>>,
+        tree: &mut Vec<coitrees::Interval<annotation::Annotation>>,
         interval: core::ops::Range<u64>,
         annotation: annotation::Annotation,
         updown_distance: u64,
@@ -130,21 +130,21 @@ impl AnnotationsDataBase {
                 interval.start - updown_distance
             };
 
-            tree.push(clairiere::Node::new(
-                upstream,
-                interval.start,
+            tree.push(coitrees::Interval::new(
+                upstream as i32,
+                interval.start as i32,
                 annotation::Annotation::from_annotation(&annotation, b"upstream"),
             ));
-            tree.push(clairiere::Node::new(
-                interval.end,
-                interval.end + updown_distance,
+            tree.push(coitrees::Interval::new(
+                interval.end as i32,
+                (interval.end + updown_distance) as i32,
                 annotation::Annotation::from_annotation(&annotation, b"downstream"),
             ));
         }
 
-        tree.push(clairiere::Node::new(
-            interval.start,
-            interval.end,
+        tree.push(coitrees::Interval::new(
+            interval.start as i32,
+            interval.end as i32,
             annotation,
         ))
     }

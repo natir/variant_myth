@@ -26,7 +26,7 @@ path = "src/main.rs"
 # Specific
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
-clairiere      = { git = "https://github.com/natir/clairiere.git" }
+coitrees       = { version = "0.4" }
 enumflags2     = { version = "0.7" }
 
 # Other
@@ -69,7 +69,7 @@ tempfile       = { version = "3" }
 [features]
 default  = ["cli"]
 cli      = ["dep:clap"]
-parallel = ["dep:rayon", "clairiere/parallel"]
+parallel = ["dep:rayon"]
 bench    = []
 
 

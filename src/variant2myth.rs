@@ -127,7 +127,7 @@ impl<'a> Variant2Myth<'a> {
         }
 
         if self.annotators_choices.contains(AnnotatorsChoicesRaw::Gene) {
-            for gene in annotations.iter().filter(|&&x| x.get_feature() == b"gene") {
+            for gene in annotations.iter().filter(|&x| x.get_feature() == b"gene") {
                 let gene_myth = myth::AnnotationMyth::builder()
                     .source(gene.get_source().to_vec())
                     .feature(gene.get_feature().to_vec())
@@ -148,7 +148,7 @@ impl<'a> Variant2Myth<'a> {
         {
             for transcript in annotations
                 .iter()
-                .filter(|&&x| x.get_feature() == b"transcript")
+                .filter(|&x| x.get_feature() == b"transcript")
             {
                 let annotations = if let Some(a) = self
                     .annotations
