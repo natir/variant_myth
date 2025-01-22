@@ -20,7 +20,7 @@ license-file = "LICENSE"
 [[bin]]
 name = "variant_myth"
 path = "src/main.rs"
-
+required-features = ["cli"]
 
 [dependencies]
 # Specific
@@ -39,8 +39,10 @@ rayon          = { version = "1", optional = true }
 csv            = { version = "1" }
 niffler        = { version = "2", features = ["bzip2", "lzma", "gz", "bgz"] }
 noodles        = { version = "0.87", features = ["fasta"] }
-arrow          = { version = "54" }
-parquet        = { version = "54" }
+arrow          = { version = "54", optional = true }
+parquet        = { version = "54", optional = true }
+serde_json     = { version = "1", features = ["preserve_order"], optional = true }
+serde          = { version = "1", features = ["derive"], optional = true }
 
 # CLI management
 clap           = { version = "4", features = ["derive"], optional = true }
@@ -52,9 +54,6 @@ anyhow         = { version = "1" }
 # Logging and error management
 log            = { version = "0.4" }
 stderrlog      = { version = "0.5" }
-serde_json = { version = "1.0.135", features = ["preserve_order"] }
-serde = { version = "1.0.217", features = ["derive"] }
-
 
 [dev-dependencies]
 ## Benchmark management
@@ -67,10 +66,16 @@ tempfile       = { version = "3" }
 
 
 [features]
-default  = ["cli"]
-cli      = ["dep:clap"]
-parallel = ["dep:rayon", "clairiere/parallel"]
-bench    = []
+default     = ["cli", "out_parquet"]
+
+cli         = ["dep:clap"]
+parallel    = ["dep:rayon", "clairiere/parallel"]
+
+# output feature
+out_parquet = ["dep:arrow", "dep:parquet"]
+out_json    = ["dep:serde", "dep:serde_json"]
+
+bench       = []
 
 
 [profile.release]

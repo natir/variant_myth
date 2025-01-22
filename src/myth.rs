@@ -9,23 +9,24 @@ use crate::effect;
 use crate::variant;
 
 /// Struct to store annotation information
-#[derive(Debug, derive_builder::Builder, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, derive_builder::Builder, Clone, PartialEq)]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 #[builder(pattern = "owned")]
 pub struct AnnotationMyth {
     /// Source of annotation
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     pub source: Vec<u8>,
 
     /// Feature type
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     pub feature: Vec<u8>,
 
     /// Feature id
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     pub id: Vec<u8>,
 
     #[builder(default)]
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     /// Feature name
     pub name: Vec<u8>,
 
@@ -72,7 +73,8 @@ impl AnnotationMythBuilder {
 }
 
 /// Store information around variant
-#[derive(Debug, PartialEq, serde::Serialize)]
+#[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 pub struct Myth {
     /// Variant associate to Myth
     pub variant: variant::Variant,

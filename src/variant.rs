@@ -7,22 +7,23 @@
 /* project use */
 use crate::error;
 
-#[derive(Clone, PartialEq, serde::Serialize)]
+#[derive(Clone, PartialEq)]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 /// Store Variant content
 pub struct Variant {
     /// Sequence name associate with variant
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     pub seqname: Vec<u8>,
 
     /// Position of the variant
     pub position: u64,
 
     /// Reference sequence associate with variant
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     pub ref_seq: Vec<u8>,
 
     /// Alternative sequence associate with variant
-    #[serde(serialize_with = "crate::serialize_bstr")]
+    #[cfg_attr(feature = "out_json", serde(serialize_with = "crate::serialize_bstr"))]
     pub alt_seq: Vec<u8>,
 }
 
