@@ -7,7 +7,8 @@
 /* project use */
 
 /// Impact of variant
-#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 pub enum Impact {
     /// Variant have an High Impact
     High = 4,
@@ -94,7 +95,8 @@ impl From<&Effect> for Impact {
 }
 
 /// Effect of variant
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 pub enum Effect {
     /// A sequence variant whereby two genes, on alternate strands have become joined.
     BidirectionalGeneFusion,
