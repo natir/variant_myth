@@ -160,8 +160,10 @@ impl Command {
 #[derive(clap::Subcommand, std::fmt::Debug)]
 pub enum OutputSubCommand {
     /// Output are write in parquet format
+    #[cfg(feature = "out_parquet")]
     Parquet(Parquet),
     /// Output are write in json format
+    #[cfg(feature = "out_json")]
     Json(Json),
 }
 
@@ -169,7 +171,9 @@ impl OutputSubCommand {
     /// Create myth writer
     pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
         match self {
+            #[cfg(feature = "out_parquet")]
             OutputSubCommand::Parquet(obj) => obj.writer(),
+            #[cfg(feature = "out_json")]
             OutputSubCommand::Json(obj) => obj.writer(),
         }
     }
@@ -177,6 +181,7 @@ impl OutputSubCommand {
 
 /// Output are write in parquet format
 #[derive(clap::Args, std::fmt::Debug)]
+#[cfg(feature = "out_parquet")]
 pub struct Parquet {
     /// Output path
     #[clap(short = 'p', long = "path")]
@@ -187,6 +192,7 @@ pub struct Parquet {
     block_size: Option<usize>,
 }
 
+#[cfg(feature = "out_parquet")]
 impl Parquet {
     /// Create myth writer
     pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
@@ -205,6 +211,7 @@ impl Parquet {
 
 /// Output are write in json format
 #[derive(clap::Args, std::fmt::Debug)]
+#[cfg(feature = "out_json")]
 pub struct Json {
     /// Output path
     #[clap(short = 'p', long = "path")]
@@ -215,6 +222,7 @@ pub struct Json {
     json_format: Option<output::JsonFormat>,
 }
 
+#[cfg(feature = "out_json")]
 impl Json {
     /// Create myth writer
     pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {

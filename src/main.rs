@@ -1,11 +1,11 @@
 //! A variant annotater.
 
+#![cfg(feature = "cli")]
 #![warn(missing_docs)]
 
 /* std use */
 
 /* crate use */
-
 use anyhow::Context as _;
 use clap::Parser as _;
 
