@@ -26,7 +26,7 @@ required-features = ["cli"]
 # Specific
 ahash          = { version = "0.8", features = ["compile-time-rng"] }
 bstr           = { version = "1", features = ["serde"] }
-clairiere      = { git = "https://github.com/natir/clairiere.git" }
+superintervals = { version = "0.2.2" }
 enumflags2     = { version = "0.7" }
 
 # Other
@@ -69,7 +69,7 @@ tempfile       = { version = "3" }
 default     = ["cli", "out_parquet"]
 
 cli         = ["dep:clap"]
-parallel    = ["dep:rayon", "clairiere/parallel"]
+parallel    = ["dep:rayon"]
 
 # output feature
 out_parquet = ["dep:arrow", "dep:parquet"]

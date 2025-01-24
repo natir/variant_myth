@@ -46,7 +46,7 @@ trait Annotator {
 
 /// Struct that associate to a variant myth
 pub struct Variant2Myth<'a> {
-    annotations: &'a annotations_db::AnnotationsDataBase,
+    annotations: &'a mut annotations_db::AnnotationsDataBase,
     annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>,
     annotators_choices: AnnotatorsChoices,
 }
@@ -54,7 +54,7 @@ pub struct Variant2Myth<'a> {
 impl<'a> Variant2Myth<'a> {
     /// Create Variant2Myth struct
     pub fn new(
-        annotations: &'a annotations_db::AnnotationsDataBase,
+        annotations: &'a mut annotations_db::AnnotationsDataBase,
         translate: &'a translate::Translate,
         sequences: &'a sequences_db::SequencesDataBase,
         annotators_choices: AnnotatorsChoices,
@@ -100,7 +100,7 @@ impl<'a> Variant2Myth<'a> {
     }
 
     /// Generate myth associate to variant
-    pub fn myth(&self, variant: variant::Variant) -> myth::Myth {
+    pub fn myth(&mut self, variant: variant::Variant) -> myth::Myth {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
         if variant.alt_seq.contains(&b'*') {
@@ -127,7 +127,7 @@ impl<'a> Variant2Myth<'a> {
         }
 
         if self.annotators_choices.contains(AnnotatorsChoicesRaw::Gene) {
-            for gene in annotations.iter().filter(|&&x| x.get_feature() == b"gene") {
+            for gene in annotations.iter().filter(|x| x.get_feature() == b"gene") {
                 let gene_myth = myth::AnnotationMyth::builder()
                     .source(gene.get_source().to_vec())
                     .feature(gene.get_feature().to_vec())
@@ -148,7 +148,7 @@ impl<'a> Variant2Myth<'a> {
         {
             for transcript in annotations
                 .iter()
-                .filter(|&&x| x.get_feature() == b"transcript")
+                .filter(|x| x.get_feature() == b"transcript")
             {
                 let annotations = if let Some(a) = self
                     .annotations

@@ -36,13 +36,13 @@ fn main() -> error::Result<()> {
         .num_threads(params.threads())
         .build_global()?;
 
-    let (annotations, sequences, translate) = get_database(&params)?;
+    let (mut annotations, sequences, translate) = get_database(&params)?;
 
     log::info!("Start annotate variant");
     let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
 
     vcf2myth(
-        &annotations,
+        &mut annotations,
         &sequences,
         &translate,
         vcf_reader,

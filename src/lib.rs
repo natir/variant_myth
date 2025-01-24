@@ -37,7 +37,7 @@ where
 /// For each variants found matching annotations
 #[cfg(not(feature = "parallel"))]
 pub fn vcf2myth<R>(
-    annotations: &annotations_db::AnnotationsDataBase,
+    annotations: &mut annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
@@ -47,7 +47,7 @@ pub fn vcf2myth<R>(
 where
     R: std::io::BufRead,
 {
-    let variant2myth =
+    let mut variant2myth =
         variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
     for result in vcf_reader {
@@ -66,7 +66,7 @@ where
 /// For each variants found matching annotations
 #[cfg(feature = "parallel")]
 pub fn vcf2myth<R>(
-    annotations: &annotations_db::AnnotationsDataBase,
+    annotations: &mut annotations_db::AnnotationsDataBase,
     sequences: &sequences_db::SequencesDataBase,
     translate: &translate::Translate,
     vcf_reader: variant::VcfReader<R>,
@@ -86,7 +86,7 @@ where
         Ok(())
     });
 
-    let variant2myth =
+    let mut variant2myth =
         variant2myth::Variant2Myth::new(annotations, translate, sequences, annotators_choices);
 
     let results = vcf_reader
