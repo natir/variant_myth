@@ -47,7 +47,7 @@ trait Annotator {
 /// Struct that associate to a variant myth
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
-    annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>,
+    annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>; 4],
     annotators_choices: AnnotatorsChoices,
 }
 
@@ -59,38 +59,32 @@ impl<'a> Variant2Myth<'a> {
         sequences: &'a sequences_db::SequencesDataBase,
         annotators_choices: AnnotatorsChoices,
     ) -> Self {
-        let mut annotators: Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>> =
-            Vec::new();
+        let mut annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>>; 4] =
+            [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
-        if annotators_choices.contains(AnnotatorsChoicesRaw::Feature) {
-            annotators.push(Box::new(feature_presence::FeaturePresence::new(
+        annotators[(AnnotatorsChoicesRaw::Gene as u8).ilog2() as usize].extend([]);
+        annotators[(AnnotatorsChoicesRaw::Feature as u8).ilog2() as usize].extend([
+            Box::new(feature_presence::FeaturePresence::new(
                 b"upstream",
                 effect::Effect::UpstreamGeneVariant,
-            )));
-
-            annotators.push(Box::new(feature_presence::FeaturePresence::new(
+            )) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::new(
                 b"downstream",
                 effect::Effect::DownstreamGeneVariant,
-            ))
-                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
-            annotators.push(Box::new(feature_presence::FeaturePresence::new(
+            )) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::new(
                 b"5UTR",
                 effect::Effect::FivePrimeUtrVariant,
-            ))
-                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
-            annotators.push(Box::new(feature_presence::FeaturePresence::new(
+            )) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::new(
                 b"3UTR",
                 effect::Effect::ThreePrimeUtrVariant,
-            ))
-                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
-        }
-
-        if annotators_choices.contains(AnnotatorsChoicesRaw::Effect) {
-            annotators.push(Box::new(sequence_analysis::SequenceAnalysis::new(
-                translate, sequences,
-            ))
-                as Box<dyn Annotator + std::marker::Send + std::marker::Sync>);
-        }
+            )) as Box<dyn Annotator + Send + Sync>,
+        ]);
+        annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].push(Box::new(
+            sequence_analysis::SequenceAnalysis::new(translate, sequences),
+        ));
+        annotators[(AnnotatorsChoicesRaw::Hgvs as u8).ilog2() as usize].extend([]);
 
         Self {
             annotations,
@@ -103,15 +97,18 @@ impl<'a> Variant2Myth<'a> {
     pub fn myth(&self, variant: variant::Variant) -> myth::Myth {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
+        // Detect not normalize variant
         if variant.alt_seq.contains(&b'*') {
             return myth;
         }
 
-        let annotations = self
+        // Get annotation
+        let not_coding_annotations = self
             .annotations
             .get_annotations(&variant.seqname, variant.get_interval());
 
-        if annotations.is_empty() {
+        // Intergenic region
+        if not_coding_annotations.is_empty() {
             myth.add_annotation(
                 myth::AnnotationMyth::builder()
                     .source(b"variant_myth".to_vec())
@@ -126,51 +123,55 @@ impl<'a> Variant2Myth<'a> {
             return myth;
         }
 
-        if self.annotators_choices.contains(AnnotatorsChoicesRaw::Gene) {
-            for gene in annotations.iter().filter(|&&x| x.get_feature() == b"gene") {
-                let gene_myth = myth::AnnotationMyth::builder()
-                    .source(gene.get_source().to_vec())
-                    .feature(gene.get_feature().to_vec())
-                    .id(gene.get_attribute().get_id().to_vec())
-                    .name(gene.get_attribute().get_name().to_vec())
-                    .effects(vec![]);
-
-                myth.add_annotation(gene_myth.build().unwrap()); // build can't failled
-            }
+        // Group annotation by transcript
+        let mut transcript2annotations = ahash::AHashMap::new();
+        for annotation in not_coding_annotations {
+            let entry = if annotation.get_feature() == b"transcript" {
+                transcript2annotations.entry(annotation.get_attribute().get_id())
+            } else {
+                transcript2annotations.entry(annotation.get_attribute().get_parent())
+            };
+            entry
+                .and_modify(|x: &mut Vec<annotation::Annotation>| x.push(annotation.clone()))
+                .or_insert(vec![annotation.clone()]);
         }
 
-        if self
-            .annotators_choices
-            .contains(AnnotatorsChoicesRaw::Feature)
-            || self
-                .annotators_choices
-                .contains(AnnotatorsChoicesRaw::Effect)
-        {
-            for transcript in annotations
+        for (transcript_name, annotations) in transcript2annotations.iter() {
+            // found transcript
+            let mut annotation_myth = if let Some(transcript_annot) = annotations
                 .iter()
-                .filter(|&&x| x.get_feature() == b"transcript")
+                .find(|x| x.get_attribute().get_id() == *transcript_name)
             {
-                let annotations = if let Some(a) = self
-                    .annotations
-                    .get_subannotations(transcript.get_attribute().get_id())
-                {
-                    a
-                } else {
-                    continue;
-                };
+                myth::AnnotationMyth::builder()
+                    .source(transcript_annot.get_source().to_vec())
+                    .feature(transcript_annot.get_feature().to_vec())
+                    .id(transcript_annot.get_attribute().get_id().to_vec())
+                    .name(transcript_annot.get_attribute().get_name().to_vec())
+            } else {
+                continue;
+            };
 
-                let mut transcript_myth = myth::AnnotationMyth::builder()
-                    .source(transcript.get_source().to_vec())
-                    .feature(transcript.get_feature().to_vec())
-                    .id(transcript.get_attribute().get_id().to_vec())
-                    .name(transcript.get_attribute().get_name().to_vec())
-                    .effects(vec![]);
-
-                for annotator in &self.annotators[..] {
-                    transcript_myth.extend_effect(&annotator.annotate(annotations, &variant))
+            // Not intergenic region
+            for flag in self.annotators_choices.iter() {
+                match flag {
+                    AnnotatorsChoicesRaw::Hgvs | AnnotatorsChoicesRaw::Effect => {
+                        if let Some(coding_annotation) =
+                            self.annotations.get_coding_annotation(transcript_name)
+                        {
+                            self.annotators[flag as usize].iter().for_each(|a| {
+                                annotation_myth
+                                    .extend_effect(&a.annotate(coding_annotation, &variant))
+                            });
+                        } else {
+                            continue;
+                        }
+                    }
+                    _ => {
+                        self.annotators[flag as usize].iter().for_each(|a| {
+                            annotation_myth.extend_effect(&a.annotate(annotations, &variant))
+                        });
+                    }
                 }
-
-                myth.add_annotation(transcript_myth.build().unwrap()); // build can't failled
             }
         }
 

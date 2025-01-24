@@ -16,7 +16,7 @@ pub struct AnnotationsDataBase {
         Vec<u8>,
         clairiere::InterpolateTree<u64, annotation::Annotation, DOMAIN_NUMBER>,
     >,
-    transcripts2other: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>>,
+    transcripts2codings: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>>,
 }
 
 impl AnnotationsDataBase {
@@ -30,7 +30,7 @@ impl AnnotationsDataBase {
             Vec<clairiere::Node<u64, annotation::Annotation>>,
         > = ahash::AHashMap::new();
 
-        let mut transcripts2other: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>> =
+        let mut transcripts2codings: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>> =
             ahash::AHashMap::new();
 
         let mut reader = csv::ReaderBuilder::new()
@@ -52,7 +52,16 @@ impl AnnotationsDataBase {
             let interval = annotation.get_interval();
 
             match annotation.get_feature() {
-                b"transcript" | b"gene" => {
+                b"exon" | b"start_codon" | b"stop_codon" => {
+                    if !transcripts2codings.contains_key(annotation.get_parent()) {
+                        transcripts2codings.insert(annotation.get_parent().to_vec(), Vec::new());
+                    }
+                    transcripts2codings
+                        .get_mut(annotation.get_parent())
+                        .unwrap() // we check previoulsy
+                        .push(annotation);
+                }
+                _ => {
                     intervals_builder
                         .entry(seqname.to_vec())
                         .and_modify(
@@ -72,15 +81,6 @@ impl AnnotationsDataBase {
                             tree
                         });
                 }
-                _ => {
-                    if !transcripts2other.contains_key(annotation.get_parent()) {
-                        transcripts2other.insert(annotation.get_parent().to_vec(), Vec::new());
-                    }
-                    transcripts2other
-                        .get_mut(annotation.get_parent())
-                        .unwrap() // we check previoulsy
-                        .push(annotation);
-                }
             }
         }
 
@@ -94,7 +94,7 @@ impl AnnotationsDataBase {
 
         Ok(Self {
             transcripts_intervals,
-            transcripts2other,
+            transcripts2codings,
         })
     }
 
@@ -111,9 +111,12 @@ impl AnnotationsDataBase {
         }
     }
 
-    /// Get sub annotation present in gene transcript
-    pub fn get_subannotations(&self, id: &[u8]) -> Option<&Vec<annotation::Annotation>> {
-        self.transcripts2other.get(id)
+    /// Get coding annotation present in transcript
+    pub fn get_coding_annotation(
+        &self,
+        transcript_id: &[u8],
+    ) -> Option<&Vec<annotation::Annotation>> {
+        self.transcripts2codings.get(transcript_id)
     }
 
     /// Add annotation
@@ -213,7 +216,7 @@ mod tests {
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
         let result = annotations
-            .get_subannotations(result[1].get_attribute().get_id())
+            .get_coding_annotation(result[1].get_attribute().get_id())
             .unwrap();
         let mut value = result.clone();
         value.sort_by_key(|a| (a.get_start(), a.get_stop()));

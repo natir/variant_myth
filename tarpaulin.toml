@@ -1,4 +1,9 @@
 [default]
+features = ""
+engine = "Llvm"
+
+[parallel]
+features = "parallel"
 engine = "Llvm"
 
 [report]
