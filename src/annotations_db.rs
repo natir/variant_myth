@@ -58,7 +58,7 @@ impl AnnotationsDataBase {
                     }
                     transcripts2codings
                         .get_mut(annotation.get_parent())
-                        .unwrap() // we check previoulsy
+                        .get_or_insert(&mut Vec::new())
                         .push(annotation);
                 }
                 _ => {
