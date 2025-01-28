@@ -53,9 +53,12 @@ impl AnnotationsDataBase {
 
             match annotation.get_feature() {
                 b"exon" | b"start_codon" | b"stop_codon" => {
+                    if !transcripts2codings.contains_key(annotation.get_parent()) {
+                        transcripts2codings.insert(annotation.get_parent().to_vec(), Vec::new());
+                    }
                     transcripts2codings
                         .get_mut(annotation.get_parent())
-                        .get_or_insert(&mut Vec::new())
+                        .unwrap() // we check previoulsy
                         .push(annotation);
                 }
                 _ => {
