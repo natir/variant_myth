@@ -24,7 +24,7 @@ impl FeaturePresence {
 impl variant2myth::Annotator for FeaturePresence {
     fn annotate(
         &self,
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         _variant: &variant::Variant,
     ) -> Vec<effect::Effect> {
         if annotations.iter().any(|a| a.get_feature() == self.name) {

@@ -202,7 +202,15 @@ mod tests {
                 .collect::<Vec<String>>(),
         ))?;
 
-        let mut truth = vec![&b1, &b2];
+        let b5 = Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(file[460..555].to_vec())
+                .unwrap()
+                .split('\t')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        let mut truth = vec![&b1, &b2, &b4];
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
         let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(file));
@@ -212,16 +220,17 @@ mod tests {
         result.sort_by_key(|a| (a.get_start(), a.get_stop()));
         assert_eq!(result, truth);
 
-        let mut truth = vec![b3, b4];
+        let mut truth = vec![b3, b5];
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
         let result = annotations
-            .get_coding_annotation(result[1].get_attribute().get_id())
+            .get_coding_annotation(b2.get_attribute().get_id())
             .unwrap();
         let mut value = result.clone();
         value.sort_by_key(|a| (a.get_start(), a.get_stop()));
-        value = value[..2].to_vec();
+        assert_eq!(value.len(), 8);
 
+        value = value[..2].to_vec();
         assert_eq!(value, truth);
 
         // seqname not present

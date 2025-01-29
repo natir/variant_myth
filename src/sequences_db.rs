@@ -67,7 +67,7 @@ impl SequencesDataBase {
     /// Get concatenation of sequence covered by annotations
     pub fn epissed(
         &self,
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         strand: annotation::Strand,
     ) -> error::Result<Vec<u8>> {
         if let Some(first) = annotations.first() {
@@ -91,7 +91,7 @@ impl SequencesDataBase {
     /// Get concatenation of sequence covered by annotations edited by variant
     pub fn epissed_edit(
         &self,
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         strand: annotation::Strand,
         variant: &variant::Variant,
     ) -> error::Result<Vec<u8>> {
@@ -129,7 +129,7 @@ impl SequencesDataBase {
     /// Get coding sequence covered by annotations
     pub fn coding(
         &self,
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         strand: annotation::Strand,
         mut start_position: std::option::Option<u64>,
         mut stop_position: std::option::Option<u64>,
@@ -164,7 +164,7 @@ impl SequencesDataBase {
     /// Get coding sequence covered by annotations edited by variant
     pub fn coding_edit(
         &self,
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         strand: annotation::Strand,
         variant: &variant::Variant,
         mut start_position: std::option::Option<u64>,
@@ -213,7 +213,7 @@ impl SequencesDataBase {
     fn coding_internal(
         &self,
         seqname: &[u8],
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         start: u64,
         stop: u64,
         mut variant_pos: u64,
@@ -341,7 +341,8 @@ mod tests {
     fn epissed() -> error::Result<()> {
         let seqdb = seqdb_setup()?;
 
-        let annotations = annotation_setup();
+        let proxy = annotation_setup();
+        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
 
         assert_eq!(
             b"".to_vec(),
@@ -365,7 +366,8 @@ mod tests {
     fn epissed_edit() -> error::Result<()> {
         let seqdb = seqdb_setup()?;
 
-        let annotations = annotation_setup();
+        let proxy = annotation_setup();
+        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
 
         let variant = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
 
@@ -385,7 +387,9 @@ mod tests {
     #[test]
     fn coding() -> error::Result<()> {
         let seqdb = seqdb_setup()?;
-        let annotations = annotation_setup();
+
+        let proxy = annotation_setup();
+        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
 
         let start_forward = Some(19);
         let stop_forward = Some(112);
@@ -449,7 +453,9 @@ mod tests {
     #[test]
     fn coding_edit() -> error::Result<()> {
         let seqdb = seqdb_setup()?;
-        let annotations = annotation_setup();
+
+        let proxy = annotation_setup();
+        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
 
         let start_forward = Some(19);
         let stop_forward = Some(112);
@@ -541,7 +547,7 @@ mod tests {
         assert_eq!(
             b"ATGACCGCCATGCAAAGGCTCACTGGG".to_vec(),
             seqdb.coding(
-                &[annotations[0].clone()],
+                &[&annotations[0]],
                 annotation::Strand::Forward,
                 //&forward_in,
                 None,
@@ -553,7 +559,7 @@ mod tests {
         assert_eq!(
             b"ATGACCGCCATGCAtAGGCTCACTGGG".to_vec(),
             seqdb.coding_edit(
-                &[annotations[0].clone()],
+                &[&annotations[0]],
                 annotation::Strand::Forward,
                 &variant,
                 None,

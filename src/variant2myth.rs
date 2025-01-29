@@ -39,7 +39,7 @@ pub type AnnotatorsChoices = enumflags2::BitFlags<AnnotatorsChoicesRaw>;
 trait Annotator {
     fn annotate(
         &self,
-        annotations: &[annotation::Annotation],
+        annotations: &[&annotation::Annotation],
         variant: &variant::Variant,
     ) -> Vec<effect::Effect>;
 }
@@ -47,7 +47,7 @@ trait Annotator {
 /// Struct that associate to a variant myth
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
-    annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>; 4],
+    annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>; 5],
     annotators_choices: AnnotatorsChoices,
 }
 
@@ -59,8 +59,8 @@ impl<'a> Variant2Myth<'a> {
         sequences: &'a sequences_db::SequencesDataBase,
         annotators_choices: AnnotatorsChoices,
     ) -> Self {
-        let mut annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>>; 4] =
-            [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
+        let mut annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>>; 5] =
+            [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
         annotators[(AnnotatorsChoicesRaw::Gene as u8).ilog2() as usize].extend([]);
         annotators[(AnnotatorsChoicesRaw::Feature as u8).ilog2() as usize].extend([
@@ -132,8 +132,8 @@ impl<'a> Variant2Myth<'a> {
                 transcript2annotations.entry(annotation.get_attribute().get_parent())
             };
             entry
-                .and_modify(|x: &mut Vec<annotation::Annotation>| x.push(annotation.clone()))
-                .or_insert(vec![annotation.clone()]);
+                .and_modify(|x: &mut Vec<&annotation::Annotation>| x.push(annotation))
+                .or_insert(vec![annotation]);
         }
 
         for (transcript_name, annotations) in transcript2annotations.iter() {
@@ -158,9 +158,12 @@ impl<'a> Variant2Myth<'a> {
                         if let Some(coding_annotation) =
                             self.annotations.get_coding_annotation(transcript_name)
                         {
+                            let proxy = coding_annotation
+                                .iter()
+                                .collect::<Vec<&annotation::Annotation>>(); // TODO: found a solution to remove this
+
                             self.annotators[flag as usize].iter().for_each(|a| {
-                                annotation_myth
-                                    .extend_effect(&a.annotate(coding_annotation, &variant))
+                                annotation_myth.extend_effect(&a.annotate(&proxy, &variant))
                             });
                         } else {
                             continue;

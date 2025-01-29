@@ -13,7 +13,6 @@ Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH
 
 Commands:
   parquet  Output are write in parquet format
-  json     Output are write in json format
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -48,7 +47,6 @@ Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH
 
 Commands:
   parquet  Output are write in parquet format
-  json     Output are write in json format
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -73,7 +71,7 @@ Options:
   -T, --timestamp <TS>
           Timestamp (sec, ms, ns, none)
   -h, --help
-          Print help (see more with \'--help\')
+          Print help (see more with '--help')
   -V, --version
           Print version
 ";
