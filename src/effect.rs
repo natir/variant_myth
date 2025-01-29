@@ -88,6 +88,7 @@ impl From<&Effect> for Impact {
 		| Effect::StartRetainedVariant // FRAME_SHIFT_BEFORE_CDS_START -> Modifier | SYNONYMOUS_START -> Low
 		| Effect::StopRetainedVariant // FrameShiftAfterCDS -> Modifer | NonSynonymousStop -> Low | SynonymousStop -> Low
 		| Effect::Duplication // Large, Exon -> High | Gene, Transcript -> Moderate
+		| Effect::Ignore // variant is ignore so…
 		=> Impact::Other,
 
         }
@@ -139,6 +140,8 @@ pub enum Effect {
     /// A sequence variant where the structure of the gene is changed.
     GeneVariant,
     /// A codon variant that changes at least one base of the first codon of a transcript.
+    Ignore,
+    /// Variant are ignore
     InitiatorCodonVariant,
     /// A region containing or overlapping no genes that is bounded on either side by a gene, or bounded by a gene and the end of the chromosome.
     IntergenicRegion,
@@ -271,6 +274,7 @@ impl From<Effect> for Impact {
 		| Effect::StartRetainedVariant // FRAME_SHIFT_BEFORE_CDS_START -> Modifier | SYNONYMOUS_START -> Low
 		| Effect::StopRetainedVariant // FrameShiftAfterCDS -> Modifer | NonSynonymousStop -> Low | SynonymousStop -> Low
 		| Effect::Duplication // Large, Exon -> High | Gene, Transcript -> Moderate
+		| Effect::Ignore // variant is ignore so…
 		=> Impact::Other,
 
         }
@@ -300,6 +304,7 @@ impl From<Effect> for Vec<u8> {
             Effect::FrameshiftVariant => b"frameshift_variant".to_vec(),
             Effect::GeneFusion => b"gene_fusion".to_vec(),
             Effect::GeneVariant => b"gene_variant".to_vec(),
+            Effect::Ignore => b"ignore".to_vec(),
             Effect::InitiatorCodonVariant => b"initiator_codon_variant".to_vec(),
             Effect::IntergenicRegion => b"intergenic_region".to_vec(),
             Effect::IntragenicVariant => b"intragenic_variant".to_vec(),
@@ -482,6 +487,7 @@ mod tests {
         assert_eq!(Impact::from(Effect::FrameshiftVariant), Impact::High);
         assert_eq!(Impact::from(Effect::GeneFusion), Impact::High);
         assert_eq!(Impact::from(Effect::GeneVariant), Impact::Modifier);
+        assert_eq!(Impact::from(Effect::Ignore), Impact::Other);
         assert_eq!(Impact::from(Effect::InitiatorCodonVariant), Impact::Low);
         assert_eq!(Impact::from(Effect::IntergenicRegion), Impact::Modifier);
         assert_eq!(Impact::from(Effect::IntragenicVariant), Impact::Modifier);
@@ -611,6 +617,7 @@ mod tests {
             Vec::<u8>::from(Effect::GeneVariant),
             b"gene_variant".to_vec()
         );
+        assert_eq!(Vec::<u8>::from(Effect::Ignore), b"ignore".to_vec());
         assert_eq!(
             Vec::<u8>::from(Effect::InitiatorCodonVariant),
             b"initiator_codon_variant".to_vec()

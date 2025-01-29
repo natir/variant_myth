@@ -99,6 +99,13 @@ impl<'a> Variant2Myth<'a> {
 
         // Detect not normalize variant
         if variant.valid() {
+            myth.add_annotation(
+                myth::AnnotationMyth::from_nowhere()
+                    .effects(vec![effect::Effect::Ignore])
+                    .build()
+                    .unwrap(), // No possible error in build
+            );
+
             return myth;
         }
 
@@ -110,11 +117,7 @@ impl<'a> Variant2Myth<'a> {
         // Intergenic region
         if not_coding_annotations.is_empty() {
             myth.add_annotation(
-                myth::AnnotationMyth::builder()
-                    .source(b"variant_myth".to_vec())
-                    .feature(b"unknow".to_vec())
-                    .id(b"".to_vec())
-                    .name(b"".to_vec())
+                myth::AnnotationMyth::from_nowhere()
                     .effects(vec![effect::Effect::IntergenicRegion])
                     .build()
                     .unwrap(), // No possible error in build

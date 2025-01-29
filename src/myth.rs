@@ -53,6 +53,15 @@ impl AnnotationMyth {
             .id(annotation.get_attribute().get_id().to_vec())
             .name(annotation.get_attribute().get_name().to_vec())
     }
+
+    /// Create a preset builder of AnnotationMyth without annotation
+    pub fn from_nowhere() -> AnnotationMythBuilder {
+        AnnotationMythBuilder::default()
+            .source(b"variant_myth".to_vec())
+            .feature(b"unknow".to_vec())
+            .id(b"".to_vec())
+            .name(b"".to_vec())
+    }
 }
 
 impl AnnotationMythBuilder {
