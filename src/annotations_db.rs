@@ -55,7 +55,7 @@ impl AnnotationsDataBase {
                 b"exon" | b"start_codon" | b"stop_codon" => {
                     transcripts2codings
                         .entry(annotation.get_parent().to_vec())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(annotation);
                 }
                 _ => {
