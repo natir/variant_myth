@@ -98,7 +98,7 @@ impl<'a> Variant2Myth<'a> {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
         // Detect not normalize variant
-        if variant.valid() {
+        if !variant.valid() {
             myth.add_annotation(
                 myth::AnnotationMyth::from_nowhere()
                     .effects(vec![effect::Effect::Ignore])
@@ -175,7 +175,9 @@ impl<'a> Variant2Myth<'a> {
                                 .iter()
                                 .collect::<Vec<&annotation::Annotation>>(); // TODO: found a solution to remove this
 
-                            self.annotators[flag as usize].iter().for_each(|a| {
+                            self.annotators[(flag as u8).ilog2() as usize]
+                                .iter()
+                                .for_each(|a| {
                                 annotation_myth.extend_effect(&a.annotate(&proxy, &variant))
                             });
                         } else {
@@ -183,7 +185,9 @@ impl<'a> Variant2Myth<'a> {
                         }
                     }
                     _ => {
-                        self.annotators[flag as usize].iter().for_each(|a| {
+                        self.annotators[(flag as u8).ilog2() as usize]
+                            .iter()
+                            .for_each(|a| {
                             annotation_myth.extend_effect(&a.annotate(annotations, &variant))
                         });
                     }
