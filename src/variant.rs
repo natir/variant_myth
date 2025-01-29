@@ -48,6 +48,24 @@ impl Variant {
         self.position..self.position + self.ref_seq.len() as u64
     }
 
+    /// Variant can be annotate by variant_myth
+    ///
+    /// ref_seq and alt_seq must contains at least one A,C,T,G,a,c,t or g
+    pub fn valid(&self) -> bool {
+        (!self.ref_seq.is_empty())
+            && (!self.alt_seq.is_empty())
+            && self.ref_seq.iter().chain(self.alt_seq.iter()).all(|c| {
+                c == &b'A'
+                    || c == &b'C'
+                    || c == &b'T'
+                    || c == &b'G'
+                    || c == &b'a'
+                    || c == &b'c'
+                    || c == &b't'
+                    || c == &b'g'
+            })
+    }
+
     #[cfg(test)]
     /// Generate a fake variant with a seqname, position, ref_seq, alt_seqdb
     pub fn test_variant(seqname: &[u8], position: u64, ref_seq: &[u8], alt_seq: &[u8]) -> Variant {
@@ -200,5 +218,30 @@ mod tests {
         assert_eq!(variant.position, 62103); // 0-based
         assert_eq!(variant.ref_seq, b"ACT");
         assert_eq!(variant.alt_seq, b"A");
+    }
+
+    #[test]
+    fn validate_variant() {
+        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"A");
+        assert!(variant.valid());
+
+        let variant = Variant::test_variant(b"chr1", 62103, b"act", b"a");
+        assert!(variant.valid());
+
+        // empty alt
+        let variant = Variant::test_variant(b"chr1", 62103, b"a", b"");
+        assert!(!variant.valid());
+
+        // empty ref
+        let variant = Variant::test_variant(b"chr1", 62103, b"", b"a");
+        assert!(!variant.valid());
+
+        // not valid ref
+        let variant = Variant::test_variant(b"chr1", 62103, b"AAA,A", b"a");
+        assert!(!variant.valid());
+
+        // not valid alt
+        let variant = Variant::test_variant(b"chr1", 62103, b"A", b"a,A");
+        assert!(!variant.valid());
     }
 }

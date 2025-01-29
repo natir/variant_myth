@@ -98,7 +98,7 @@ impl<'a> Variant2Myth<'a> {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
         // Detect not normalize variant
-        if variant.alt_seq.contains(&b'*') {
+        if variant.valid() {
             return myth;
         }
 
