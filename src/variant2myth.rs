@@ -129,11 +129,7 @@ impl<'a> Variant2Myth<'a> {
                 .filter(|a| a.get_feature() == b"gene")
             {
                 myth.add_annotation(
-                    myth::AnnotationMyth::builder()
-                        .source(gene.get_source().to_vec())
-                        .feature(gene.get_feature().to_vec())
-                        .id(gene.get_attribute().get_id().to_vec())
-                        .name(gene.get_attribute().get_name().to_vec())
+                    myth::AnnotationMyth::from_annotation(gene)
                         .effects(vec![])
                         .build()
                         .unwrap(), // No possible error in build
@@ -160,11 +156,7 @@ impl<'a> Variant2Myth<'a> {
                 .iter()
                 .find(|x| x.get_attribute().get_id() == *transcript_name)
             {
-                myth::AnnotationMyth::builder()
-                    .source(transcript_annot.get_source().to_vec())
-                    .feature(transcript_annot.get_feature().to_vec())
-                    .id(transcript_annot.get_attribute().get_id().to_vec())
-                    .name(transcript_annot.get_attribute().get_name().to_vec())
+                myth::AnnotationMyth::from_annotation(transcript_annot)
             } else {
                 continue;
             };

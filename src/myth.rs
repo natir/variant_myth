@@ -5,6 +5,7 @@
 /* crate use */
 
 /* project use */
+use crate::annotation;
 use crate::effect;
 use crate::variant;
 
@@ -42,6 +43,15 @@ impl AnnotationMyth {
     /// Get builder of AnnotationMyth
     pub fn builder() -> AnnotationMythBuilder {
         AnnotationMythBuilder::default()
+    }
+
+    /// Create a preset builder from annotation of AnnotationMyth, effect must be set before build
+    pub fn from_annotation(annotation: &annotation::Annotation) -> AnnotationMythBuilder {
+        AnnotationMythBuilder::default()
+            .source(annotation.get_source().to_vec())
+            .feature(annotation.get_feature().to_vec())
+            .id(annotation.get_attribute().get_id().to_vec())
+            .name(annotation.get_attribute().get_name().to_vec())
     }
 }
 
