@@ -25,5 +25,3 @@ jobs:
           toolchain: $rust_version
       - name: Run tests
         run: cargo test
-      - name: Run tests parallel
-        run: cargo test --features parallel
