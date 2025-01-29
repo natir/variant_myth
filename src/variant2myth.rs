@@ -178,8 +178,8 @@ impl<'a> Variant2Myth<'a> {
                             self.annotators[(flag as u8).ilog2() as usize]
                                 .iter()
                                 .for_each(|a| {
-                                annotation_myth.extend_effect(&a.annotate(&proxy, &variant))
-                            });
+                                    annotation_myth.extend_effect(&a.annotate(&proxy, &variant))
+                                });
                         } else {
                             continue;
                         }
@@ -188,8 +188,8 @@ impl<'a> Variant2Myth<'a> {
                         self.annotators[(flag as u8).ilog2() as usize]
                             .iter()
                             .for_each(|a| {
-                            annotation_myth.extend_effect(&a.annotate(annotations, &variant))
-                        });
+                                annotation_myth.extend_effect(&a.annotate(annotations, &variant))
+                            });
                     }
                 }
             }
