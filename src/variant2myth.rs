@@ -7,6 +7,7 @@
 /* module declaration */
 mod feature_presence;
 mod sequence_analysis;
+mod splice_variant;
 
 /* project use */
 use crate::annotation;

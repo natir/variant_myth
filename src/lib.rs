@@ -19,6 +19,7 @@ pub mod myth;
 pub mod output;
 pub mod sequences_db;
 pub mod translate;
+pub mod utils;
 pub mod variant;
 pub mod variant2myth;
 
