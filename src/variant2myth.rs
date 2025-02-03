@@ -82,9 +82,12 @@ impl<'a> Variant2Myth<'a> {
                 effect::Effect::ThreePrimeUtrVariant,
             )) as Box<dyn Annotator + Send + Sync>,
         ]);
-        annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].push(Box::new(
-            sequence_analysis::SequenceAnalysis::new(translate, sequences),
-        ));
+        annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].extend([
+            Box::new(sequence_analysis::SequenceAnalysis::new(
+                translate, sequences,
+            )) as Box<dyn Annotator + Send + Sync>,
+            Box::new(splice_variant::SpliceVariant {}) as Box<dyn Annotator + Send + Sync>,
+        ]);
         annotators[(AnnotatorsChoicesRaw::Hgvs as u8).ilog2() as usize].extend([]);
 
         Self {
