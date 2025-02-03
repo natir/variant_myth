@@ -197,6 +197,7 @@ impl<'a> Variant2Myth<'a> {
                     }
                 }
             }
+            myth.add_annotation(annotation_myth.build().unwrap())
         }
 
         myth
