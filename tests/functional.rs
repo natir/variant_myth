@@ -1,6 +1,7 @@
 /* std use */
 
 /* crate use */
+#[cfg(not(feature = "out_json"))]
 use arrow::array::Array as _;
 
 /* project use */
@@ -54,6 +55,7 @@ where
     for column in truth.schema().fields() {
         match column.data_type() {
             arrow::datatypes::DataType::Utf8 => {
+                // Convert an arrow StringArray in Rust Vec<String> is hard sorry
                 let proxy = truth
                     .column_by_name(column.name())
                     .unwrap()
@@ -81,6 +83,7 @@ where
                 assert_eq!(t, r);
             }
             arrow::datatypes::DataType::UInt64 => {
+                // Convert an arrow UInt64 in Rust Vec<UInt64> is hard sorry
                 let proxy = truth
                     .column_by_name(column.name())
                     .unwrap()
@@ -108,6 +111,7 @@ where
                 assert_eq!(t, r);
             }
             arrow::datatypes::DataType::UInt8 => {
+                // Convert an arrow UInt8 in Rust Vec<UInt8> is hard sorry
                 let proxy = truth
                     .column_by_name(column.name())
                     .unwrap()
@@ -166,7 +170,7 @@ fn annotator_gene() -> anyhow::Result<()> {
     let mut output_path = tmp_path.join("myth");
     if cfg!(feature = "out_json") {
         output_path.set_extension("json");
-        args.extend(["json", "-p", output_path.to_str().unwrap()]);
+        args.extend(["json", "-p", output_path.to_str().unwrap(), "-f", "nd-json"]);
     } else {
         output_path.set_extension("parquet");
         args.extend(["parquet", "-p", output_path.to_str().unwrap()]);
@@ -178,6 +182,7 @@ fn annotator_gene() -> anyhow::Result<()> {
 
     assert.success();
 
+    dbg!(&output_path);
     if cfg!(feature = "out_json") {
         compare_by_record("tests/data/truth/annotator_gene.json", &output_path)
     } else {
