@@ -80,7 +80,7 @@ impl Type {
 }
 
 #[derive(Clone, PartialEq)]
-#[cfg_attr(feature = "out_json", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 /// Store Variant content
 pub struct Variant {
     /// Sequence name associate with variant

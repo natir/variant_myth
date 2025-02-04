@@ -11,7 +11,7 @@ use crate::variant;
 
 /// Struct to store annotation information
 #[derive(Debug, derive_builder::Builder, Clone, PartialEq)]
-#[cfg_attr(feature = "out_json", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 #[builder(pattern = "owned")]
 pub struct AnnotationMyth {
     /// Source of annotation
@@ -93,7 +93,7 @@ impl AnnotationMythBuilder {
 
 /// Store information around variant
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "out_json", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 pub struct Myth {
     /// Variant associate to Myth
     pub variant: variant::Variant,
