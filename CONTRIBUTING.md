@@ -43,13 +43,17 @@ This call create a `data` directory with file `annotations.gff3.gz`, `references
 
 You could generate a subsample of `data` directory content for a manual check with command:
 ```bash
-./get_data.py subsample -a data/annotations.gff3.gz -r data/references.fasta.gz -A data/sub_annotations.gff3 -R data/sub_references.fasta -V data/sub_variants.vcf --seed 1234
+./get_data.py subsample -a data/annotations.gff3.gz -r data/references.fasta.gz \
+-A data/sub_annotations.gff3 -R data/sub_references.fasta -V data/sub_variants.vcf \
+--seed 1234
 ```
 
 File in `tests/data/`, used for functional test, are generate by command:
 ```bash
 mkdir -p tests/data/
-./get_data.py subsample -a data/annotations.gff3.gz -r data/references.fasta.gz -A tests/data/annotations.gff3 -R tests/data/references.fasta -V tests/data/variants.vcf --seed 42
+./get_data.py subsample -a data/annotations.gff3.gz -r data/references.fasta.gz \
+-A tests/data/annotations.gff3 -R tests/data/references.fasta -V tests/data/variants.vcf \
+--seed 42
 ```
 
 
