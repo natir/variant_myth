@@ -26,7 +26,9 @@ where
     .map(std::result::Result::unwrap)
     .collect::<std::collections::HashSet<serde_json::Value>>();
 
-    assert_eq!(truth, result);
+    if truth != result {
+        return Err(anyhow::anyhow!("truth: {:?}\nresult: {:?}", truth, result));
+    }
 
     Ok(())
 }
@@ -80,7 +82,14 @@ where
 
                 t.sort();
                 r.sort();
-                assert_eq!(t, r);
+                if t != r {
+                    return Err(anyhow::anyhow!(
+                        "Column {}\n\ttruth: {:?}\n\tresult: {:?}",
+                        column.name(),
+                        t,
+                        r
+                    ));
+                }
             }
             arrow::datatypes::DataType::UInt64 => {
                 // Convert an arrow UInt64 in Rust Vec<UInt64> is hard sorry
@@ -108,7 +117,14 @@ where
 
                 t.sort();
                 r.sort();
-                assert_eq!(t, r);
+                if t != r {
+                    return Err(anyhow::anyhow!(
+                        "Column {}\n\ttruth: {:?}\n\tresult: {:?}",
+                        column.name(),
+                        t,
+                        r
+                    ));
+                }
             }
             arrow::datatypes::DataType::UInt8 => {
                 // Convert an arrow UInt8 in Rust Vec<UInt8> is hard sorry
@@ -136,7 +152,15 @@ where
 
                 t.sort();
                 r.sort();
-                assert_eq!(t, r);
+
+                if t != r {
+                    return Err(anyhow::anyhow!(
+                        "Column {}\n\ttruth: {:?}\n\tresult: {:?}",
+                        column.name(),
+                        t,
+                        r
+                    ));
+                }
             }
             a => unreachable!("This column type isn't variant_myth schema {:?}", a),
         }
@@ -148,6 +172,7 @@ where
 #[test]
 fn annotator_gene() -> anyhow::Result<()> {
     let tmp_path = tempfile::tempdir()?.into_path();
+    let mut truth_path = std::path::PathBuf::from("tests/data/truth/annotator_gene");
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
 
     let mut args = Vec::new();
@@ -176,17 +201,97 @@ fn annotator_gene() -> anyhow::Result<()> {
         args.extend(["parquet", "-p", output_path.to_str().unwrap()]);
     };
 
-    cmd.args(args);
+    cmd.args(&args);
 
     let assert = cmd.assert();
 
-    assert.success();
+    if let Err(e) = assert.try_success() {
+        eprintln!(
+            "failled\n\targument: {}\n\toutput path {}",
+            args.join(" "),
+            output_path.to_str().unwrap()
+        );
+        return Err(e.into());
+    }
 
-    dbg!(&output_path);
     if cfg!(feature = "out_json") {
-        compare_by_record("tests/data/truth/annotator_gene.json", &output_path)
+        truth_path.set_extension("json");
     } else {
-        compare_by_record("tests/data/truth/annotator_gene.parquet", &output_path)
+        truth_path.set_extension("parquet");
+    }
+
+    if let Err(e) = compare_by_record(truth_path, &output_path) {
+        eprintln!(
+            "failled\n\targument: {}\n\toutput path {}",
+            args.join(" "),
+            output_path.to_str().unwrap()
+        );
+        Err(e)
+    } else {
+        Ok(())
+    }
+}
+
+#[test]
+fn annotator_feature() -> anyhow::Result<()> {
+    let tmp_path = tempfile::tempdir()?.into_path();
+    let mut truth_path = std::path::PathBuf::from("tests/data/truth/annotator_feature");
+    let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
+
+    let mut args = Vec::new();
+
+    args.extend([
+        "-i",
+        "tests/data/variants.vcf",
+        "-r",
+        "tests/data/references.fasta",
+        "-a",
+        "tests/data/annotations.gff3",
+        "-c",
+        "feature",
+    ]);
+
+    if cfg!(feature = "parallel") {
+        args.extend(["--threads", "2"]);
+    }
+
+    let mut output_path = tmp_path.join("myth");
+    if cfg!(feature = "out_json") {
+        output_path.set_extension("json");
+        args.extend(["json", "-p", output_path.to_str().unwrap(), "-f", "nd-json"]);
+    } else {
+        output_path.set_extension("parquet");
+        args.extend(["parquet", "-p", output_path.to_str().unwrap()]);
+    };
+
+    cmd.args(&args);
+
+    let assert = cmd.assert();
+
+    if let Err(e) = assert.try_success() {
+        eprintln!(
+            "failled\n\targument: {}\n\toutput path {}",
+            args.join(" "),
+            output_path.to_str().unwrap()
+        );
+        return Err(e.into());
+    }
+
+    if cfg!(feature = "out_json") {
+        truth_path.set_extension("json");
+    } else {
+        truth_path.set_extension("parquet");
+    }
+
+    if let Err(e) = compare_by_record(truth_path, &output_path) {
+        eprintln!(
+            "failled\n\targument: {}\n\toutput path {}",
+            args.join(" "),
+            output_path.to_str().unwrap()
+        );
+        Err(e)
+    } else {
+        Ok(())
     }
 }
 
@@ -197,7 +302,7 @@ fn logging_updown_setup() -> anyhow::Result<()> {
     let output_path = tmp_path.join("myth.parquet");
 
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
-    cmd.args([
+    let args = vec![
         "-vv",
         "-i",
         "tests/data/variants.vcf",
@@ -207,13 +312,25 @@ fn logging_updown_setup() -> anyhow::Result<()> {
         "tests/data/annotations.gff3",
         "parquet",
         "-p",
-        &format!("{}", output_path.display()),
-    ]);
+        output_path.to_str().unwrap(),
+    ];
+
+    cmd.args(&args);
 
     let assert = cmd.assert();
 
-    assert.success().stdout(&b""[..]).stderr(
-        &b"INFO - Start read genome reference
+    match assert.try_success() {
+        Err(e) => {
+            eprintln!(
+                "failled\n\targument: {}\n\toutput path {}",
+                args.join(" "),
+                output_path.to_str().unwrap()
+            );
+            return Err(e.into());
+        }
+        Ok(o) => {
+            o.stdout(&b""[..]).stderr(
+                &b"INFO - Start read genome reference
 INFO - End read genome reference
 INFO - Start read annotations
 INFO - End read annotations
@@ -222,7 +339,9 @@ INFO - End read translation table
 INFO - Start annotate variant
 INFO - End annotate variant
 "[..],
-    );
+            );
+        }
+    }
 
     Ok(())
 }

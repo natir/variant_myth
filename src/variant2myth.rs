@@ -73,11 +73,11 @@ impl<'a> Variant2Myth<'a> {
                 effect::Effect::DownstreamGeneVariant,
             )) as Box<dyn Annotator + Send + Sync>,
             Box::new(feature_presence::FeaturePresence::new(
-                b"5UTR",
+                b"five_prime_UTR",
                 effect::Effect::FivePrimeUtrVariant,
             )) as Box<dyn Annotator + Send + Sync>,
             Box::new(feature_presence::FeaturePresence::new(
-                b"3UTR",
+                b"three_prime_UTR",
                 effect::Effect::ThreePrimeUtrVariant,
             )) as Box<dyn Annotator + Send + Sync>,
         ]);
@@ -153,23 +153,21 @@ impl<'a> Variant2Myth<'a> {
                 .or_insert(vec![annotation]);
         }
 
-        for (transcript_name, annotations) in transcript2annotations.iter() {
-            // found transcript
-            let mut annotation_myth = if let Some(transcript_annot) = annotations
-                .iter()
-                .find(|x| x.get_attribute().get_id() == *transcript_name)
-            {
-                myth::AnnotationMyth::from_annotation(transcript_annot)
-            } else {
-                continue;
-            };
+        for (transcript_id, annotations) in transcript2annotations.iter() {
+            // found transcript annotations
+            let mut annotation_myth =
+                if let Some(transcript_annot) = self.annotations.get_transcript(transcript_id) {
+                    myth::AnnotationMyth::from_annotation(transcript_annot).effects(vec![])
+                } else {
+                    continue;
+                };
 
-            // Not intergenic region
             for flag in self.annotators_choices.iter() {
                 match flag {
+                    // Annotators choices flag required acces to coding annotation
                     AnnotatorsChoicesRaw::Hgvs | AnnotatorsChoicesRaw::Effect => {
                         if let Some(coding_annotation) =
-                            self.annotations.get_coding_annotation(transcript_name)
+                            self.annotations.get_coding_annotation(transcript_id)
                         {
                             let proxy = coding_annotation
                                 .iter()
@@ -184,6 +182,7 @@ impl<'a> Variant2Myth<'a> {
                             continue;
                         }
                     }
+                    // Annotators choices flag not required acces to coding annotation
                     _ => {
                         self.annotators[(flag as u8).ilog2() as usize]
                             .iter()
@@ -193,6 +192,8 @@ impl<'a> Variant2Myth<'a> {
                     }
                 }
             }
+
+            myth.add_annotation(annotation_myth.build().unwrap()) // No possible error in build
         }
 
         myth

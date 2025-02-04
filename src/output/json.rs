@@ -176,11 +176,6 @@ mod tests {
         annot_writer.write_myth(myth2).unwrap();
         annot_writer.finalize().unwrap();
 
-        eprintln!(
-            "{}",
-            std::str::from_utf8(&annot_writer.output_stream).unwrap()
-        );
-
         assert_eq!(
             std::str::from_utf8(&annot_writer.output_stream).unwrap(),
             r#"{
@@ -256,10 +251,6 @@ mod tests {
         annot_writer.write_myth(myth2).unwrap();
         annot_writer.finalize().unwrap();
 
-        eprintln!(
-            "{}",
-            std::str::from_utf8(&annot_writer.output_stream).unwrap()
-        );
         assert_eq!(
             std::str::from_utf8(&annot_writer.output_stream).unwrap(),
             r#"{"metadata":{"alt":"alternative sequence","chr":"chromosome name same ase original vcf","effect":"List of sequence ontology terms","feature":"type of feature affected by variant gene/transcript","id":"id of feature, same value of Id gff3 attributes","impact":"0: UNKOWN, 1:LOW, 2:MODIFIER, 3: MODERATE, 4:HIGH","name":"name of feature, same value of Name gff3 attributes","pos":"position of variant","ref":"reference sequence","source":"source of variant in gff3 file"}}
