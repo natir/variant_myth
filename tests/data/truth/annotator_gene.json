@@ -1,0 +1,999 @@
+{
+"metadata":
+{
+  "alt": "alternative sequence",
+  "chr": "chromosome name same ase original vcf",
+  "effect": "List of sequence ontology terms",
+  "feature": "type of feature affected by variant gene/transcript",
+  "id": "id of feature, same value of Id gff3 attributes",
+  "impact": "0: UNKOWN, 1:LOW, 2:MODIFIER, 3: MODERATE, 4:HIGH",
+  "name": "name of feature, same value of Name gff3 attributes",
+  "pos": "position of variant",
+  "ref": "reference sequence",
+  "source": "source of variant in gff3 file"
+},
+"variants": [
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 31771,
+    "ref_seq": "A",
+    "alt_seq": "g"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 65786,
+    "ref_seq": "T",
+    "alt_seq": "c"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 201583,
+    "ref_seq": "T",
+    "alt_seq": "c"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 28401,
+    "ref_seq": "G",
+    "alt_seq": "a"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 76162,
+    "ref_seq": "C",
+    "alt_seq": "g"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 3456,
+    "ref_seq": "C",
+    "alt_seq": "a"
+  },
+  "myth": []
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 6844,
+    "ref_seq": "G",
+    "alt_seq": "a"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 137432,
+    "ref_seq": "T",
+    "alt_seq": "g"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 53218,
+    "ref_seq": "T",
+    "alt_seq": "a"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 221906,
+    "ref_seq": "G",
+    "alt_seq": "t"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 5741,
+    "ref_seq": "T",
+    "alt_seq": "g"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 192717,
+    "ref_seq": "C",
+    "alt_seq": "t"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 45014,
+    "ref_seq": "G",
+    "alt_seq": "t"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 82952,
+    "ref_seq": "C",
+    "alt_seq": "g"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 172619,
+    "ref_seq": "A",
+    "alt_seq": "c"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 181757,
+    "ref_seq": "G",
+    "alt_seq": "c"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 26976,
+    "ref_seq": "C",
+    "alt_seq": "a"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 215227,
+    "ref_seq": "C",
+    "alt_seq": "a"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 91711,
+    "ref_seq": "A",
+    "alt_seq": "t"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 101110,
+    "ref_seq": "G",
+    "alt_seq": "a"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 84084,
+    "ref_seq": "A",
+    "alt_seq": "Atc"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 78039,
+    "ref_seq": "A",
+    "alt_seq": "Atattg"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 56837,
+    "ref_seq": "A",
+    "alt_seq": "Acc"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 276,
+    "ref_seq": "C",
+    "alt_seq": "Cct"
+  },
+  "myth": [
+    {
+      "source": "ENSEMBL",
+      "feature": "gene",
+      "id": "ENSG00000244692.3",
+      "name": "",
+      "effects": [],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 89917,
+    "ref_seq": "C",
+    "alt_seq": "Cggt"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 67185,
+    "ref_seq": "C",
+    "alt_seq": "Catctc"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 11856,
+    "ref_seq": "ACAA",
+    "alt_seq": "A"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 72484,
+    "ref_seq": "TCT",
+    "alt_seq": "T"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 218127,
+    "ref_seq": "TGTG",
+    "alt_seq": "T"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 80828,
+    "ref_seq": "TC",
+    "alt_seq": "T"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 239373,
+    "ref_seq": "C",
+    "alt_seq": "Ctatg"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 19216,
+    "ref_seq": "t",
+    "alt_seq": "tcaaa"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 70261,
+    "ref_seq": "A",
+    "alt_seq": "Aaaga"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 17548,
+    "ref_seq": "G",
+    "alt_seq": "Gagc"
+  },
+  "myth": [
+    {
+      "source": "HAVANA",
+      "feature": "gene",
+      "id": "ENSG00000224565.3",
+      "name": "",
+      "effects": [],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 251872,
+    "ref_seq": "ACTTA",
+    "alt_seq": "A"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 85538,
+    "ref_seq": "C",
+    "alt_seq": "Cccaag"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 8701,
+    "ref_seq": "AG",
+    "alt_seq": "A"
+  },
+  "myth": [
+    {
+      "source": "HAVANA",
+      "feature": "gene",
+      "id": "ENSG00000262919.8",
+      "name": "",
+      "effects": [],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrC",
+    "position": 20455,
+    "ref_seq": "AGGAT",
+    "alt_seq": "A"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrA",
+    "position": 5766,
+    "ref_seq": "GCAT",
+    "alt_seq": "G"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 60530,
+    "ref_seq": "AACC",
+    "alt_seq": "A"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "IntergenicRegion"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 106246,
+    "ref_seq": "C",
+    "alt_seq": "<INS>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 148479,
+    "ref_seq": "C",
+    "alt_seq": "<DEL>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 48636,
+    "ref_seq": "G",
+    "alt_seq": "<CNV>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 348120,
+    "ref_seq": "T",
+    "alt_seq": "<INS>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 122287,
+    "ref_seq": "G",
+    "alt_seq": "<INS>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 258131,
+    "ref_seq": "A",
+    "alt_seq": "<DUP>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 175402,
+    "ref_seq": "C",
+    "alt_seq": "<INS>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 118985,
+    "ref_seq": "C",
+    "alt_seq": "<CNV>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 339588,
+    "ref_seq": "G",
+    "alt_seq": "<DEL>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+},
+{
+  "variant": {
+    "seqname": "chrB",
+    "position": 310688,
+    "ref_seq": "A",
+    "alt_seq": "<DUP>"
+  },
+  "myth": [
+    {
+      "source": "variant_myth",
+      "feature": "unknow",
+      "id": "",
+      "name": "",
+      "effects": [
+        "Ignore"
+      ],
+      "impact": "Other"
+    }
+  ]
+}]
+}

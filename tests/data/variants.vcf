@@ -1,0 +1,56 @@
+##fileformat=VCFv4.3
+##contig=<ID=chrA,length=32478>
+##contig=<ID=chrB,length=367040>
+##contig=<ID=chrC,length=95438>
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chrA	31772	.	A	g	99	PASS	.
+chrC	65787	.	T	c	99	PASS	.
+chrB	201584	.	T	c	99	PASS	.
+chrA	28402	.	G	a	99	PASS	.
+chrB	76163	.	C	g	99	PASS	.
+chrA	3457	.	C	a	99	PASS	.
+chrA	6845	.	G	a	99	PASS	.
+chrB	137433	.	T	g	99	PASS	.
+chrC	53219	.	T	a	99	PASS	.
+chrB	221907	.	G	t	99	PASS	.
+chrA	5742	.	T	g	99	PASS	.
+chrB	192718	.	C	t	99	PASS	.
+chrC	45015	.	G	t	99	PASS	.
+chrC	82953	.	C	g	99	PASS	.
+chrB	172620	.	A	c	99	PASS	.
+chrB	181758	.	G	c	99	PASS	.
+chrA	26977	.	C	a	99	PASS	.
+chrB	215228	.	C	a	99	PASS	.
+chrC	91712	.	A	t	99	PASS	.
+chrB	101111	.	G	a	99	PASS	.
+chrC	84085	.	A	Atc	99	PASS	.
+chrC	78040	.	A	Atattg	99	PASS	.
+chrC	56838	.	A	Acc	99	PASS	.
+chrA	277	.	C	Cct	99	PASS	.
+chrC	89918	.	C	Cggt	99	PASS	.
+chrC	67186	.	C	Catctc	99	PASS	.
+chrA	11857	.	ACAA	A	99	PASS	.
+chrB	72485	.	TCT	T	99	PASS	.
+chrB	218128	.	TGTG	T	99	PASS	.
+chrC	80829	.	TC	T	99	PASS	.
+chrB	239374	.	C	Ctatg	99	PASS	.
+chrA	19217	.	t	tcaaa	99	PASS	.
+chrB	70262	.	A	Aaaga	99	PASS	.
+chrB	17549	.	G	Gagc	99	PASS	.
+chrB	251873	.	ACTTA	A	99	PASS	.
+chrC	85539	.	C	Cccaag	99	PASS	.
+chrC	8702	.	AG	A	99	PASS	.
+chrC	20456	.	AGGAT	A	99	PASS	.
+chrA	5767	.	GCAT	G	99	PASS	.
+chrB	60531	.	AACC	A	99	PASS	.
+chrB	106247	.	C	<INS>	99	PASS	SVLEN=314
+chrB	148480	.	C	<DEL>	99	PASS	SVLEN=862
+chrB	48637	.	G	<CNV>	99	PASS	SVLEN=499
+chrB	348121	.	T	<INS>	99	PASS	SVLEN=101
+chrB	122288	.	G	<INS>	99	PASS	SVLEN=718
+chrB	258132	.	A	<DUP>	99	PASS	SVLEN=690
+chrB	175403	.	C	<INS>	99	PASS	SVLEN=953
+chrB	118986	.	C	<CNV>	99	PASS	SVLEN=718
+chrB	339589	.	G	<DEL>	99	PASS	SVLEN=864
+chrB	310689	.	A	<DUP>	99	PASS	SVLEN=337

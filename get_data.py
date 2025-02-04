@@ -2,6 +2,7 @@
 
 # std import
 import argparse
+import copy
 import csv
 import gzip
 import logging
@@ -26,7 +27,7 @@ GFF_PARENT_REGEX = re.compile(r"Parent=(?P<parent>[^;]+)")
 
 
 def is_gz(filepath: pathlib.Path):
-    """Return true if first two bit match gzip magic number"""
+    """Return true if first two bit match gzip magic number."""
     with open(filepath, "rb") as fh:
         return fh.read(2) == b"\x1f\x8b"
 
@@ -46,7 +47,7 @@ def random_seq(length: int) -> str:
 
 def edit_record(record: list[str], chrom: str, new_start: int) -> list[str]:
     """Edit gff record."""
-
+    record = copy.deepcopy(record)
     prev_begin = int(record[3])
     prev_end = int(record[4])
     new_end = new_start + prev_end - prev_begin
@@ -60,7 +61,6 @@ def edit_record(record: list[str], chrom: str, new_start: int) -> list[str]:
 
 def download() -> int:
     """Download  example input file."""
-
     os.makedirs("data", exist_ok=True)
 
     logging.info("Start download annotations")
@@ -95,7 +95,7 @@ def subsample(
     variants_output: pathlib.Path,
     seed: int,
 ) -> int:
-    """Extract some information in input to generate a fake genome"""
+    """Extract some information in input to generate a fake genome."""
     random.seed(seed)
 
     ###############
@@ -124,7 +124,7 @@ def subsample(
     logging.info("Start read annotation input")
     id2record: dict[str, list[str]] = {}
     feature2id: dict[str, list[str]] = defaultdict(list)
-    parent2child: dict[str : list[list[str]]] = defaultdict(list)
+    parent2child: dict[str: list[list[str]]] = defaultdict(list)
     with open_file(annotations_input) as fh:
         reader = csv.reader(filter(lambda row: row[0] != "#", fh), delimiter="\t")
         for record in reader:
@@ -198,6 +198,8 @@ def subsample(
 
             for child_id in parent2child[transcript_id]:
                 child_record = id2record[child_id]
+                if child_record[2] == "CDS":
+                    print(child_record)
                 new_start = start_position + int(child_record[3]) - prev_begin
                 select_record.append(edit_record(child_record, choose_chr, new_start))
 
@@ -261,7 +263,6 @@ def subsample(
             f"{chrom}\t{pos}\t.\t{ref}\t<{sv_type}>\t99\tPASS\tSVLEN={length}"
         )
     logging.info("End generate variant")
-
 
     ##################
     # Write annotation
