@@ -5,6 +5,7 @@
 /* crate use */
 
 /* project use */
+use crate::effect;
 use crate::error;
 use crate::myth;
 use crate::output;
@@ -94,6 +95,21 @@ impl<W: std::io::Write + std::marker::Send + std::io::Seek + 'static> output::My
     for ParquetWriter<W>
 {
     fn add_myth(&mut self, myth: myth::Myth) -> error::Result<()> {
+        if myth.annotations.is_empty() {
+            self.chrs
+                .push(unsafe { String::from_utf8_unchecked(myth.variant.seqname.clone()) });
+            self.poss.push(myth.variant.position);
+            self.refs
+                .push(unsafe { String::from_utf8_unchecked(myth.variant.ref_seq.clone()) });
+            self.alts
+                .push(unsafe { String::from_utf8_unchecked(myth.variant.alt_seq.clone()) });
+            self.source.push("".to_string());
+            self.feature.push("".to_string());
+            self.name.push("".to_string());
+            self.id.push("".to_string());
+            self.effects.push("".to_string());
+            self.impact.push(effect::Impact::Other as u8);
+        }
         for annotation in myth.annotations {
             self.chrs
                 .push(unsafe { String::from_utf8_unchecked(myth.variant.seqname.clone()) });
@@ -120,6 +136,7 @@ impl<W: std::io::Write + std::marker::Send + std::io::Seek + 'static> output::My
             );
             self.impact.push(annotation.impact as u8);
         }
+
         Ok(())
     }
 
