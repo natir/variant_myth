@@ -45,11 +45,8 @@ impl variant2myth::Annotator for SpliceVariant {
         annotations: &[&annotation::Annotation],
         variant: &variant::Variant,
     ) -> Vec<effect::Effect> {
-        let res = {
-            let mut res: Vec<_> = vec![];
-            cdna_annotate(variant.position, annotations, &mut res);
-            res
-        };
+        let mut res: Vec<_> = vec![];
+        cdna_annotate(variant.position, annotations, &mut res);
         res
     }
 }

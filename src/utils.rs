@@ -16,7 +16,7 @@ pub enum CDNAPosition {
 
     /// The locus is in an exonic region, and within the coding sequence
     ExonicCoding {
-        /// Distance to start codon (negative means 5', positive means 3', never zero!)
+        /// Distance to start codon (always positive)
         distance_to_start_codon: i64,
     },
 
@@ -47,33 +47,22 @@ impl Display for CDNAPosition {
         match self {
             Self::ExonicFivePrimeUTR {
                 distance_to_start_codon,
-            } => {
-                write!(f, "{}", distance_to_start_codon)?;
-            }
+            } => write!(f, "{}", distance_to_start_codon),
             Self::ExonicCoding {
                 distance_to_start_codon,
-            } => {
-                write!(f, "{}", distance_to_start_codon)?;
-            }
+            } => write!(f, "{}", distance_to_start_codon),
             Self::FivePrimeIntronic {
                 last_exon_position,
                 distance_to_prev_exon,
-            } => {
-                write!(f, "{}+{}", last_exon_position, distance_to_prev_exon)?;
-            }
+            } => write!(f, "{}+{}", last_exon_position, distance_to_prev_exon),
             Self::ThreePrimeIntronic {
                 next_exon_position,
                 distance_to_next_exon,
-            } => {
-                write!(f, "{}{}", next_exon_position, distance_to_next_exon)?;
-            }
+            } => write!(f, "{}{}", next_exon_position, distance_to_next_exon),
             Self::ExonicThreePrimeUTR {
                 distance_to_stop_codon,
-            } => {
-                write!(f, "*{}", distance_to_stop_codon)?;
-            }
+            } => write!(f, "*{}", distance_to_stop_codon),
         }
-        Ok(())
     }
 }
 
@@ -108,7 +97,7 @@ impl CDNAPosition {
                 .iter()
                 .min_by_key(|a| a.get_start())
                 .map(|a| g_tx_start - a.get_start())?,
-        };
+        } + 1;
 
         // Get 0-based pre-mRNA coordinate of pos, regardless of orientation. Will return early if negative (i.e. 5' upstream if forward, 3' downstream if reverse)
         let tx_pos = match strandness {
@@ -163,24 +152,13 @@ impl CDNAPosition {
             f
         };
 
-        let mut last_mrna_base = 0;
-        let mut last_exon_end = 0;
-        for exon in exons_coords.iter() {
-            // tx_pos is intronic, we just missed it in the previous iteration
-            if tx_pos < exon.0 {
-                if tx_pos < (exon.0 - last_exon_end).div_euclid(2) {
-                    return Some(CDNAPosition::FivePrimeIntronic {
-                        last_exon_position: last_mrna_base as i64,
-                        distance_to_prev_exon: (tx_pos - last_exon_end) as i64,
-                    });
-                } else {
-                    return Some(CDNAPosition::ThreePrimeIntronic {
-                        next_exon_position: (last_mrna_base + 1) as i64,
-                        distance_to_next_exon: 0 - (exons_coords[1].0 - tx_pos) as i64,
-                    });
-                }
+        let mut running_intron_len = 0;
+        let mut last_intron_len = 0;
+        for (exon_id, exon) in exons_coords.iter().enumerate() {
+            if exon_id > 0 {
+                last_intron_len = exon.0.abs_diff(exons_coords[exon_id - 1].1);
+                running_intron_len += last_intron_len;
             }
-
             // tx_pos is exonic
             if tx_pos >= exon.0 && tx_pos < exon.1 {
                 // Is it 5'UTR, coding, or 3'UTR ?
@@ -188,24 +166,50 @@ impl CDNAPosition {
                 // Coding
                 if tx_pos >= tx_start_codon && tx_pos < tx_stop_codon {
                     return Some(CDNAPosition::ExonicCoding {
-                        distance_to_start_codon: (tx_pos as i64 - tx_start_codon as i64),
+                        distance_to_start_codon: tx_pos as i64
+                            - tx_start_codon as i64
+                            - running_intron_len as i64,
                     });
                 }
                 // 5' UTR
                 else if tx_pos < tx_start_codon {
                     return Some(CDNAPosition::ExonicFivePrimeUTR {
-                        distance_to_start_codon: (tx_pos as i64 - tx_start_codon as i64),
+                        distance_to_start_codon: tx_start_codon as i64
+                            - tx_pos as i64
+                            - running_intron_len as i64,
                     });
                 }
                 // 3'UTR
                 else if tx_pos > tx_stop_codon {
                     return Some(CDNAPosition::ExonicThreePrimeUTR {
-                        distance_to_stop_codon: (tx_pos as i64 - tx_stop_codon as i64),
+                        distance_to_stop_codon: tx_stop_codon as i64
+                            - tx_pos as i64
+                            - running_intron_len as i64,
                     });
                 }
             }
-            last_mrna_base += exon.1 - exon.0;
-            last_exon_end = exon.1;
+            // tx_pos is intronic, we just missed it in the previous iteration
+            if tx_pos < exon.0 {
+                // Check distance to previous exon, to see which one is closer
+                if (exons_coords[exon_id - 1].1.abs_diff(tx_pos))
+                    < (exons_coords[exon_id].0.abs_diff(tx_pos))
+                {
+                    return Some(CDNAPosition::FivePrimeIntronic {
+                        last_exon_position: exons_coords[exon_id - 1].1 as i64
+                            - tx_start_codon as i64
+                            - (running_intron_len - last_intron_len) as i64,
+                        distance_to_prev_exon: tx_pos as i64 - exons_coords[exon_id - 1].1 as i64,
+                    });
+                } else {
+                    return Some(CDNAPosition::ThreePrimeIntronic {
+                        next_exon_position: exon.1 as i64
+                            - tx_start_codon as i64
+                            - (running_intron_len - last_intron_len) as i64
+                            + 1,
+                        distance_to_next_exon: tx_pos as i64 - exon.0 as i64,
+                    });
+                }
+            }
         }
         None
     }
@@ -213,5 +217,40 @@ impl CDNAPosition {
 
 #[cfg(test)]
 mod tests {
-    //TODO: implement tests
+    use crate::annotations_db;
+
+    use super::CDNAPosition;
+
+    // This GFF is an actual part of ncbiRefSeq, with hg19 coordinates.
+    const	GFF:	&'static	[u8]	=	b"chr11	ncbiRefSeq.2021-05-17	transcript	5246694	5248301	.	-	.	ID=NM_000518.5;Parent=HBB;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	exon	5246694	5246956	.	-	.	ID=NM_000518.5.3;Parent=NM_000518.5;exon_id=NM_000518.5.3;exon_number=3;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	exon	5247807	5248029	.	-	.	ID=NM_000518.5.2;Parent=NM_000518.5;exon_id=NM_000518.5.2;exon_number=2;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	exon	5248160	5248301	.	-	.	ID=NM_000518.5.1;Parent=NM_000518.5;exon_id=NM_000518.5.1;exon_number=1;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	CDS	5246828	5246956	.	-	0	ID=agat-cds-343287;Parent=NM_000518.5;exon_id=NM_000518.5.3;exon_number=3;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	CDS	5247807	5248029	.	-	1	ID=agat-cds-343288;Parent=NM_000518.5;exon_id=NM_000518.5.2;exon_number=2;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	CDS	5248160	5248251	.	-	0	ID=agat-cds-343289;Parent=NM_000518.5;exon_id=NM_000518.5.1;exon_number=1;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	3UTR	5246694	5246827	.	-	.	ID=agat-3utr-35972;Parent=NM_000518.5;exon_id=NM_000518.5.3;exon_number=3;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	5UTR	5248252	5248301	.	-	.	ID=agat-5utr-66412;Parent=NM_000518.5;exon_id=NM_000518.5.1;exon_number=1;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	start_codon	5248249	5248251	.	-	0	ID=agat-start_codon-34632;Parent=NM_000518.5;exon_id=NM_000518.5.1;exon_number=1;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+chr11	ncbiRefSeq.2021-05-17	stop_codon	5246828	5246830	.	-	0	ID=agat-stop_codon-34241;Parent=NM_000518.5;exon_id=NM_000518.5.3;exon_number=3;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5";
+
+    #[test]
+    fn test_cdna_from_genomic_position() {
+        // chr11:5248158A>G should be a splice donor variant with HGVS.c = c.92+2T>C
+
+        let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(GFF));
+        let annotation_db =
+            annotations_db::AnnotationsDataBase::from_reader(std::io::BufReader::new(reader), 100)
+                .unwrap();
+
+        let annotations = annotation_db.get_coding_annotation(b"NM_000518.5").unwrap();
+
+        let proxy = annotations
+            .iter()
+            .collect::<Vec<&crate::annotation::Annotation>>();
+        let cdna_pos = CDNAPosition::from_genomic_pos(5247141u64, &proxy).unwrap();
+        eprintln!("{:?}", &cdna_pos);
+
+        // chr11:5246958T>C should be a splice acceptor variant
+    }
 }
