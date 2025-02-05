@@ -211,10 +211,7 @@ mod tests {
     /* crate use */
 
     /* project use */
-
-    use crate::variant2myth::AnnotatorsChoicesRaw;
-
-    use super::AnnotatorsChoices;
+    use super::*;
 
     #[test]
     fn annotator_choices() {

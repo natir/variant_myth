@@ -40,6 +40,63 @@ mod tests {
     /* std use */
 
     /* crate use */
+    use bstr::ByteSlice as _;
 
     /* project use */
+    use crate::annotation;
+    use crate::effect;
+    use crate::error;
+    use crate::tests::GFF;
+    use crate::variant;
+    use crate::variant2myth::Annotator as _;
+
+    use super::FeaturePresence;
+
+    #[test]
+    fn feature_presence() -> error::Result<()> {
+        let file = GFF.replace(b"{0}", b"chr1");
+
+        let obj = FeaturePresence::new(b"five_prime_UTR", effect::Effect::FivePrimeUtrVariant);
+        let annotation = annotation::Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(file[292..374].to_vec())
+                .unwrap()
+                .split('\t')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        assert_eq!(
+            obj.annotate(
+                &[&annotation],
+                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C")
+            ),
+            vec![effect::Effect::FivePrimeUtrVariant]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn feature_absence() -> error::Result<()> {
+        let file = GFF.replace(b"{0}", b"chr1");
+
+        let obj = FeaturePresence::new(b"three_prime_UTR", effect::Effect::ThreePrimeUtrVariant);
+        let annotation = annotation::Annotation::from_byte_record(&csv::ByteRecord::from(
+            String::from_utf8(file[292..374].to_vec())
+                .unwrap()
+                .split('\t')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        ))?;
+
+        assert_eq!(
+            obj.annotate(
+                &[&annotation],
+                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C")
+            ),
+            vec![]
+        );
+
+        Ok(())
+    }
 }
