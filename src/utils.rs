@@ -152,39 +152,31 @@ impl CDNAPosition {
             f
         };
 
-        let mut running_intron_len = 0;
-        let mut last_intron_len = 0;
+        // Weird variable to keep track of the distance between current exon end and start codon.
+        let mut last_cds_position: i64 = 0;
         for (exon_id, exon) in exons_coords.iter().enumerate() {
-            if exon_id > 0 {
-                last_intron_len = exon.0.abs_diff(exons_coords[exon_id - 1].1);
-                running_intron_len += last_intron_len;
-            }
             // tx_pos is exonic
             if tx_pos >= exon.0 && tx_pos < exon.1 {
                 // Is it 5'UTR, coding, or 3'UTR ?
 
+                let distance_to_start_codon = exon.1 as i64 - tx_pos as i64;
+
                 // Coding
                 if tx_pos >= tx_start_codon && tx_pos < tx_stop_codon {
                     return Some(CDNAPosition::ExonicCoding {
-                        distance_to_start_codon: tx_pos as i64
-                            - tx_start_codon as i64
-                            - running_intron_len as i64,
+                        distance_to_start_codon,
                     });
                 }
                 // 5' UTR
                 else if tx_pos < tx_start_codon {
                     return Some(CDNAPosition::ExonicFivePrimeUTR {
-                        distance_to_start_codon: tx_start_codon as i64
-                            - tx_pos as i64
-                            - running_intron_len as i64,
+                        distance_to_start_codon,
                     });
                 }
                 // 3'UTR
                 else if tx_pos > tx_stop_codon {
                     return Some(CDNAPosition::ExonicThreePrimeUTR {
-                        distance_to_stop_codon: tx_stop_codon as i64
-                            - tx_pos as i64
-                            - running_intron_len as i64,
+                        distance_to_stop_codon: tx_pos as i64 - tx_stop_codon as i64,
                     });
                 }
             }
@@ -195,21 +187,23 @@ impl CDNAPosition {
                     < (exons_coords[exon_id].0.abs_diff(tx_pos))
                 {
                     return Some(CDNAPosition::FivePrimeIntronic {
-                        last_exon_position: exons_coords[exon_id - 1].1 as i64
-                            - tx_start_codon as i64
-                            - (running_intron_len - last_intron_len) as i64,
-                        distance_to_prev_exon: tx_pos as i64 - exons_coords[exon_id - 1].1 as i64,
+                        last_exon_position: last_cds_position,
+                        distance_to_prev_exon: tx_pos as i64 - exons_coords[exon_id - 1].1 as i64
+                            + 1,
                     });
                 } else {
                     return Some(CDNAPosition::ThreePrimeIntronic {
-                        next_exon_position: exon.1 as i64
-                            - tx_start_codon as i64
-                            - (running_intron_len - last_intron_len) as i64
-                            + 1,
+                        next_exon_position: last_cds_position + 1,
                         distance_to_next_exon: tx_pos as i64 - exon.0 as i64,
                     });
                 }
             }
+            // First exon
+            last_cds_position = if exon_id == 0 {
+                (exon.1 - exon.0) as i64 - tx_start_codon as i64
+            } else {
+                last_cds_position + (exon.1 - exon.0) as i64
+            };
         }
         None
     }
@@ -248,9 +242,28 @@ chr11	ncbiRefSeq.2021-05-17	stop_codon	5246828	5246830	.	-	0	ID=agat-stop_codon-
         let proxy = annotations
             .iter()
             .collect::<Vec<&crate::annotation::Annotation>>();
-        let cdna_pos = CDNAPosition::from_genomic_pos(5247141u64, &proxy).unwrap();
-        eprintln!("{:?}", &cdna_pos);
-
-        // chr11:5246958T>C should be a splice acceptor variant
+        let genomic_positions = [
+            5247733, 5248050, 5248155, 5247737, 5247251, 5247781, 5247070, 5248113, 5248049,
+            5247250, 5247141, 5247194, 5248106, 5248143, 5246957, 5247720, 5248097, 5246975,
+            5248107, 5246959, 5246971, 5248158, 5247234, 5247081, 5247155, 5247058, 5248055,
+            5247134, 5247806, 5248052, 5246958, 5247026, 5246958, 5247062, 5246998, 5247135,
+            5247052, 5247724, 5247806, 5248159, 5248155, 5246993, 5248154, 5246989, 5247195,
+            5248159, 5248149, 5248155, 5248158, 5246959, 5248121, 5247791, 5247726, 5247274,
+            5246992, 5247153, 5247036, 5247220, 5247736, 5247001, 5246984,
+        ];
+        let cdna_positions = [
+            "315+74", "93-21", "92+5", "315+70", "316-295", "315+26", "316-114", "92+47", "93-20",
+            "316-294", "316-185", "316-238", "92+54", "92+17", "316-1", "315+87", "92+63",
+            "316-19", "92+53", "316-3", "316-15", "92+2", "316-278", "316-125", "316-199",
+            "316-102", "93-26", "316-178", "315+1", "93-23", "316-2", "316-70", "316-2", "316-106",
+            "316-42", "316-179", "316-96", "315+83", "315+1", "92+1", "92+5", "316-37", "92+6",
+            "316-33", "316-239", "92+1", "92+11", "92+5", "92+2", "316-3", "92+39", "315+16",
+            "315+81", "316-318", "316-36", "316-197", "316-80", "316-264", "315+71", "316-45",
+            "316-28",
+        ];
+        for (g_pos, cdna_pos) in genomic_positions.into_iter().zip(cdna_positions.iter()) {
+            let cdna_pos_pred = CDNAPosition::from_genomic_pos(g_pos, &proxy).unwrap();
+            assert_eq!(cdna_pos, &cdna_pos_pred.to_string());
+        }
     }
 }
