@@ -7,24 +7,51 @@ use arrow::array::Array as _;
 /* project use */
 
 #[cfg(feature = "out_json")]
+fn dive_in_tree(object: serde_json::Value, objects: &mut ahash::AHashSet<String>) -> () {
+    match object {
+        serde_json::Value::Null => (),
+        serde_json::Value::Bool(b) => {
+            objects.insert(format!("{}", b));
+        }
+        serde_json::Value::Number(n) => {
+            objects.insert(format!("{}", n));
+        }
+        serde_json::Value::String(s) => {
+            objects.insert(s);
+        }
+        serde_json::Value::Array(v) => {
+            v.iter().for_each(|o| dive_in_tree(o.clone(), objects));
+        }
+        serde_json::Value::Object(m) => {
+            m.iter().for_each(|(k, v)| {
+                objects.insert(k.to_string());
+                dive_in_tree(v.clone(), objects);
+            });
+        }
+    }
+}
+
+#[cfg(feature = "out_json")]
 fn compare_by_record<P, R>(truth_path: P, result_path: R) -> anyhow::Result<()>
 where
     P: std::convert::AsRef<std::path::Path>,
     R: std::convert::AsRef<std::path::Path>,
 {
-    let truth = serde_json::Deserializer::from_reader(
+    let mut truth = ahash::AHashSet::new();
+    serde_json::Deserializer::from_reader(
         std::fs::File::open(&truth_path).map(std::io::BufReader::new)?,
     )
-    .into_iter::<serde_json::Value>()
+    .into_iter()
     .map(std::result::Result::unwrap)
-    .collect::<std::collections::HashSet<serde_json::Value>>();
+    .for_each(|o| dive_in_tree(o, &mut truth));
 
-    let result = serde_json::Deserializer::from_reader(
+    let mut result = ahash::AHashSet::new();
+    serde_json::Deserializer::from_reader(
         std::fs::File::open(&result_path).map(std::io::BufReader::new)?,
     )
-    .into_iter::<serde_json::Value>()
+    .into_iter()
     .map(std::result::Result::unwrap)
-    .collect::<std::collections::HashSet<serde_json::Value>>();
+    .for_each(|o| dive_in_tree(o, &mut result));
 
     if truth != result {
         return Err(anyhow::anyhow!("truth: {:?}\nresult: {:?}", truth, result));
