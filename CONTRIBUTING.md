@@ -17,7 +17,7 @@ git switch -c fix_11         # branch create to fix issue 11
 git switch -c feat_index_rc  # branch to add a new index reverse complement method
 ```
 
-## Code contribution
+### Code contribution
 
 Before submit pull request make sure you run:
 
@@ -32,6 +32,26 @@ You can check your new code are covered by run:
 cargo tarpaulin
 ```
 And open `target/coverage/tarpaulin-report.html`
+
+### Dataset acquisition and generation
+
+Get human data:
+```bash
+./get_data.py download
+```
+This call create a `data` directory with file `annotations.gff3.gz`, `references.fasta.gz` and `variants.vcf.gz`, this file are usefull "real use case" run.
+
+You could generate a subsample of `data` directory content for a manual check with command:
+```bash
+./get_data.py subsample -a data/annotations.gff3.gz -r data/references.fasta.gz -A data/sub_annotations.gff3 -R data/sub_references.fasta -V data/sub_variants.vcf --seed 1234
+```
+
+File in `tests/data/`, used for functional test, are generate by command:
+```bash
+mkdir -p tests/data/
+./get_data.py subsample -a data/annotations.gff3.gz -r data/references.fasta.gz -A tests/data/annotations.gff3 -R tests/data/references.fasta -V tests/data/variants.vcf --seed 42
+```
+
 
 ### Documentation pull request
 
