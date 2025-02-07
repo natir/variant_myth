@@ -38,18 +38,20 @@ fn main() -> error::Result<()> {
 
     let (annotations, sequences, translate) = get_database(&params)?;
 
-    log::info!("Start annotate variant");
-    let vcf_reader = variant::VcfReader::from_reader(params.variant()?);
+    for (input, output) in params.variant()?.iter_mut().zip(params.output.writers()?) {
+        log::info!("Start annotate variant");
+        let vcf_reader = variant::VcfReader::from_reader(input);
 
-    vcf2myth(
-        &annotations,
-        &sequences,
-        &translate,
-        vcf_reader,
-        params.annotators_choices(),
-        params.output.writer()?,
-    )?;
-    log::info!("End annotate variant");
+        vcf2myth(
+            &annotations,
+            &sequences,
+            &translate,
+            vcf_reader,
+            params.annotators_choices(),
+            output,
+        )?;
+        log::info!("End annotate variant");
+    }
 
     Ok(())
 }

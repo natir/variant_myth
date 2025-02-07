@@ -8,7 +8,7 @@
 
 const USAGE: &[u8] = b"A variant annotater
 
-Usage: variant_myth [OPTIONS] --input <VARIANT_PATH> --reference <REFERENCE_PATH> --annotations <ANNOTATIONS_PATH> <COMMAND>
+Usage: variant_myth [OPTIONS] --input <VARIANT_PATHS> --reference <REFERENCE_PATH> --annotations <ANNOTATIONS_PATH> <COMMAND>
 
 Commands:
 ";
@@ -25,8 +25,8 @@ const SUBCOMMAND_HELP: &[u8] =
 ";
 
 const LOCAL_OPTIONS: &[u8] = b"Options:
-  -i, --input <VARIANT_PATH>
-          Variant path
+  -i, --input <VARIANT_PATHS>
+          Variants path
   -r, --reference <REFERENCE_PATH>
           Reference genome path
   -a, --annotations <ANNOTATIONS_PATH>
