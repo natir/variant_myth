@@ -7,6 +7,7 @@
 /* module declaration */
 mod feature_presence;
 mod sequence_analysis;
+mod start_stop_lost;
 
 /* project use */
 use crate::annotation;
@@ -81,9 +82,17 @@ impl<'a> Variant2Myth<'a> {
                 effect::Effect::ThreePrimeUtrVariant,
             )) as Box<dyn Annotator + Send + Sync>,
         ]);
-        annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].push(Box::new(
-            sequence_analysis::SequenceAnalysis::new(translate, sequences),
-        ));
+        annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].extend([
+            Box::new(sequence_analysis::SequenceAnalysis::new(
+                translate, sequences,
+            )) as Box<dyn Annotator + Send + Sync>,
+            Box::new(start_stop_lost::StartStopLost::<
+                { effect::Effect::StartLost as usize },
+            >::new(translate, sequences)) as Box<dyn Annotator + Send + Sync>,
+            Box::new(start_stop_lost::StartStopLost::<
+                { effect::Effect::StopLost as usize },
+            >::new(translate, sequences)) as Box<dyn Annotator + Send + Sync>,
+        ]);
         annotators[(AnnotatorsChoicesRaw::Hgvs as u8).ilog2() as usize].extend([]);
 
         Self {
@@ -171,9 +180,10 @@ impl<'a> Variant2Myth<'a> {
                         if let Some(coding_annotation) =
                             self.annotations.get_coding_annotation(transcript_name)
                         {
-                            let proxy = coding_annotation
+                            let mut proxy = coding_annotation
                                 .iter()
                                 .collect::<Vec<&annotation::Annotation>>(); // TODO: found a solution to remove this
+                            proxy.sort_by_key(|a| a.get_start());
 
                             self.annotators[(flag as u8).ilog2() as usize]
                                 .iter()

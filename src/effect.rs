@@ -97,6 +97,7 @@ impl From<&Effect> for Impact {
 
 /// Effect of variant
 #[derive(Debug, Clone, PartialEq)]
+#[repr(usize)]
 #[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 pub enum Effect {
     /// A sequence variant whereby two genes, on alternate strands have become joined.

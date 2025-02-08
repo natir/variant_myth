@@ -1,4 +1,4 @@
-//! An annotator for upstream variant
+//! An annotator to detect if variant match with a specific feature
 
 /* std use */
 
