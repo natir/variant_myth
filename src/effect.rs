@@ -89,6 +89,7 @@ impl From<&Effect> for Impact {
 		| Effect::StopRetainedVariant // FrameShiftAfterCDS -> Modifer | NonSynonymousStop -> Low | SynonymousStop -> Low
 		| Effect::Duplication // Large, Exon -> High | Gene, Transcript -> Moderate
 		| Effect::Ignore // variant is ignore so…
+		| Effect::Other // it's a fallback so…
 		=> Impact::Other,
 
         }
@@ -97,6 +98,7 @@ impl From<&Effect> for Impact {
 
 /// Effect of variant
 #[derive(Debug, Clone, PartialEq)]
+#[repr(usize)]
 #[cfg_attr(feature = "out_json", derive(serde::Serialize))]
 pub enum Effect {
     /// A sequence variant whereby two genes, on alternate strands have become joined.
@@ -207,6 +209,8 @@ pub enum Effect {
     TranscriptAblation,
     /// A sequence variant located 5' of a gene.
     UpstreamGeneVariant,
+    /// A fallback
+    Other = 54,
 }
 
 impl From<Effect> for Impact {
@@ -275,6 +279,7 @@ impl From<Effect> for Impact {
 		| Effect::StopRetainedVariant // FrameShiftAfterCDS -> Modifer | NonSynonymousStop -> Low | SynonymousStop -> Low
 		| Effect::Duplication // Large, Exon -> High | Gene, Transcript -> Moderate
 		| Effect::Ignore // variant is ignore so…
+		| Effect::Other // it's a fallback so…
 		=> Impact::Other,
 
         }
@@ -342,7 +347,19 @@ impl From<Effect> for Vec<u8> {
             Effect::TfbsAblation => b"TFBS_ablation".to_vec(),
             Effect::TranscriptAblation => b"transcript_ablation".to_vec(),
             Effect::UpstreamGeneVariant => b"upstream_gene_variant".to_vec(),
+            Effect::Other => b"other".to_vec(),
         }
+    }
+}
+
+/// Convert a usize value to Effect it's use for const evaluation
+///
+/// SAFETY: If value is upper than max Effect (aka Effect::Other) value return is Effect::Other
+pub const fn usize2effect(value: usize) -> Effect {
+    if value < Effect::Other as usize {
+        unsafe { std::mem::transmute::<usize, Effect>(value) }
+    } else {
+        Effect::Other
     }
 }
 
@@ -735,5 +752,69 @@ mod tests {
             Vec::<u8>::from(Effect::UpstreamGeneVariant),
             b"upstream_gene_variant".to_vec()
         );
+        assert_eq!(Vec::<u8>::from(Effect::Other), b"other".to_vec());
+    }
+
+    #[test]
+    fn conversion_of_usize2effect() {
+        assert_eq!(usize2effect(0), Effect::BidirectionalGeneFusion);
+        assert_eq!(usize2effect(1), Effect::Chromosome);
+        assert_eq!(usize2effect(2), Effect::ChromosomeNumberVariation);
+        assert_eq!(usize2effect(3), Effect::CodingSequenceVariant);
+        assert_eq!(usize2effect(4), Effect::ConservativeInframeDeletion);
+        assert_eq!(usize2effect(5), Effect::ConservativeInframeInsertion);
+        assert_eq!(usize2effect(6), Effect::ConservedIntergenicVariant);
+        assert_eq!(usize2effect(7), Effect::ConservedIntronVariant);
+        assert_eq!(usize2effect(8), Effect::DisruptiveInframeDeletion);
+        assert_eq!(usize2effect(9), Effect::DisruptiveInframeInsertion);
+        assert_eq!(usize2effect(10), Effect::DownstreamGeneVariant);
+        assert_eq!(usize2effect(11), Effect::Duplication);
+        assert_eq!(usize2effect(12), Effect::ExonLossVariant);
+        assert_eq!(usize2effect(13), Effect::ExonRegion);
+        assert_eq!(usize2effect(14), Effect::FeatureAblation);
+        assert_eq!(usize2effect(15), Effect::FeatureElongation);
+        assert_eq!(usize2effect(16), Effect::FeatureFusion);
+        assert_eq!(usize2effect(17), Effect::FrameshiftVariant);
+        assert_eq!(usize2effect(18), Effect::GeneFusion);
+        assert_eq!(usize2effect(19), Effect::GeneVariant);
+        assert_eq!(usize2effect(20), Effect::Ignore);
+        assert_eq!(usize2effect(21), Effect::InitiatorCodonVariant);
+        assert_eq!(usize2effect(22), Effect::IntergenicRegion);
+        assert_eq!(usize2effect(23), Effect::IntragenicVariant);
+        assert_eq!(usize2effect(24), Effect::IntronVariant);
+        assert_eq!(usize2effect(25), Effect::Inversion);
+        assert_eq!(usize2effect(26), Effect::MiRna);
+        assert_eq!(usize2effect(27), Effect::MissenseVariant);
+        assert_eq!(usize2effect(28), Effect::NonCodingTranscriptExonVariant);
+        assert_eq!(usize2effect(29), Effect::NonCodingTranscriptVariant);
+        assert_eq!(usize2effect(30), Effect::ThreePrimeUtrTruncation);
+        assert_eq!(usize2effect(31), Effect::ThreePrimeUtrVariant);
+        assert_eq!(
+            usize2effect(32),
+            Effect::FivePrimeUtrPrematureStartCodonGainVariant
+        );
+        assert_eq!(usize2effect(33), Effect::FivePrimeUtrTruncation);
+        assert_eq!(usize2effect(34), Effect::FivePrimeUtrVariant);
+        assert_eq!(usize2effect(35), Effect::ProteinProteinContact);
+        assert_eq!(usize2effect(36), Effect::RareAminoAcidVariant);
+        assert_eq!(usize2effect(37), Effect::RearrangedAtDnaLevel);
+        assert_eq!(usize2effect(38), Effect::RegulatoryRegionVariant);
+        assert_eq!(usize2effect(39), Effect::SequenceFeature);
+        assert_eq!(usize2effect(40), Effect::SpliceAcceptorVariant);
+        assert_eq!(usize2effect(41), Effect::SpliceDonorVariant);
+        assert_eq!(usize2effect(42), Effect::SpliceRegionVariant);
+        assert_eq!(usize2effect(43), Effect::StartLost);
+        assert_eq!(usize2effect(44), Effect::StartRetainedVariant);
+        assert_eq!(usize2effect(45), Effect::StopGained);
+        assert_eq!(usize2effect(46), Effect::StopLost);
+        assert_eq!(usize2effect(47), Effect::StopRetainedVariant);
+        assert_eq!(usize2effect(48), Effect::StructuralInteractionVariant);
+        assert_eq!(usize2effect(49), Effect::SynonymousVariant);
+        assert_eq!(usize2effect(50), Effect::TfBindingSiteVariant);
+        assert_eq!(usize2effect(51), Effect::TfbsAblation);
+        assert_eq!(usize2effect(52), Effect::TranscriptAblation);
+        assert_eq!(usize2effect(53), Effect::UpstreamGeneVariant);
+        assert_eq!(usize2effect(54), Effect::Other);
+        assert_eq!(usize2effect(255), Effect::Other);
     }
 }
