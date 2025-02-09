@@ -18,6 +18,15 @@ impl<const E: usize> FeaturePresence<E> {
     }
 }
 
+/// Associate an effect to a corresponding feature name
+///
+/// Effect support:
+///   - effect::Effect::UpstreamGeneVariant
+///   - effect::Effect::DownstreamGeneVariant
+///   - effect::Effect::FivePrimeUtrVariant
+///   - effect::Effect::ThreePrimeUtrVariant
+///
+/// If you run this function on any other Effect code panic
 const fn effect2feature_name<const E: usize>() -> &'static [u8] {
     match effect::usize2effect(E) {
         effect::Effect::UpstreamGeneVariant => b"upstream",
@@ -81,6 +90,12 @@ mod tests {
             effect2feature_name::<{ effect::Effect::ThreePrimeUtrVariant as usize }>(),
             b"three_prime_UTR"
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn convert_effect2feature_name_panic() {
+        effect2feature_name::<{ effect::Effect::BidirectionalGeneFusion as usize }>();
     }
 
     #[test]
