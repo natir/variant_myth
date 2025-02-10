@@ -33,9 +33,9 @@ fn get_reader(
 #[command(propagate_version = true)]
 pub struct Command {
     // Specific option
-    /// Variant path
-    #[clap(short = 'i', long = "input")]
-    variant_path: std::path::PathBuf,
+    /// Variants path
+    #[clap(short = 'i', long = "input", required = true)]
+    variant_paths: Vec<std::path::PathBuf>,
 
     /// Reference genome path
     #[clap(short = 'r', long = "reference")]
@@ -84,8 +84,11 @@ impl Command {
     /// Get variant reader
     pub fn variant(
         &self,
-    ) -> error::Result<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>> {
-        get_reader(&self.variant_path).map(std::io::BufReader::new)
+    ) -> error::Result<Vec<std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>>>> {
+        self.variant_paths
+            .iter()
+            .map(|p| get_reader(p).map(std::io::BufReader::new))
+            .collect()
     }
 
     /// Get reference reader
@@ -169,12 +172,12 @@ pub enum OutputSubCommand {
 
 impl OutputSubCommand {
     /// Create myth writer
-    pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
+    pub fn writers(&self) -> error::Result<Vec<Box<dyn output::MythWriter + std::marker::Send>>> {
         match self {
             #[cfg(feature = "out_parquet")]
-            OutputSubCommand::Parquet(obj) => obj.writer(),
+            OutputSubCommand::Parquet(obj) => obj.writers(),
             #[cfg(feature = "out_json")]
-            OutputSubCommand::Json(obj) => obj.writer(),
+            OutputSubCommand::Json(obj) => obj.writers(),
         }
     }
 }
@@ -184,8 +187,8 @@ impl OutputSubCommand {
 #[cfg(feature = "out_parquet")]
 pub struct Parquet {
     /// Output path
-    #[clap(short = 'p', long = "path")]
-    path: std::path::PathBuf,
+    #[clap(short = 'p', long = "path", required = true)]
+    paths: Vec<std::path::PathBuf>,
 
     /// Size of parquet block, default value 65536
     #[clap(short = 'b', long = "block-size")]
@@ -195,12 +198,18 @@ pub struct Parquet {
 #[cfg(feature = "out_parquet")]
 impl Parquet {
     /// Create myth writer
-    pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
-        let output = std::fs::File::create(&self.path).map(std::io::BufWriter::new)?;
-        Ok(Box::new(output::ParquetWriter::new(
-            output,
-            self.block_size(),
-        )?))
+    pub fn writers(&self) -> error::Result<Vec<Box<dyn output::MythWriter + std::marker::Send>>> {
+        let mut result = Vec::new();
+
+        for p in &self.paths {
+            result.push(Box::new(output::ParquetWriter::new(
+                std::fs::File::create(p).map(std::io::BufWriter::new)?,
+                self.block_size(),
+            )?)
+                as Box<dyn output::MythWriter + std::marker::Send>);
+        }
+
+        Ok(result)
     }
 
     /// Get block_size
@@ -214,8 +223,8 @@ impl Parquet {
 #[cfg(feature = "out_json")]
 pub struct Json {
     /// Output path
-    #[clap(short = 'p', long = "path")]
-    path: std::path::PathBuf,
+    #[clap(short = 'p', long = "path", required = true)]
+    paths: Vec<std::path::PathBuf>,
 
     /// Json format, default json
     #[clap(short = 'f', long = "format")]
@@ -225,9 +234,18 @@ pub struct Json {
 #[cfg(feature = "out_json")]
 impl Json {
     /// Create myth writer
-    pub fn writer(&self) -> error::Result<Box<dyn output::MythWriter + std::marker::Send>> {
-        let output = std::fs::File::create(&self.path).map(std::io::BufWriter::new)?;
-        Ok(Box::new(output::JsonWriter::new(output, self.format())?))
+    pub fn writers(&self) -> error::Result<Vec<Box<dyn output::MythWriter + std::marker::Send>>> {
+        let mut result = Vec::new();
+
+        for p in &self.paths {
+            result.push(Box::new(output::JsonWriter::new(
+                std::fs::File::create(p).map(std::io::BufWriter::new)?,
+                self.format(),
+            )?)
+                as Box<dyn output::MythWriter + std::marker::Send>);
+        }
+
+        Ok(result)
     }
 
     /// Get format value
