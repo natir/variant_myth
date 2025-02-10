@@ -32,8 +32,6 @@ impl Type {
         if let Some(infos) = optional_infos {
             for info in infos.split_str(";") {
                 if let [b'S', b'V', b'L', b'E', b'N', b'=', value @ ..] = info {
-                    println!("PROUT");
-                    println!("{:?}", String::from_utf8(value.to_vec()));
                     opt_svlen =
                         unsafe { Some(String::from_utf8_unchecked(value.to_vec()).parse::<u64>()?) }
                 }
