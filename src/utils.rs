@@ -5,6 +5,8 @@ use std::fmt::Display;
 
 use crate::annotation::{self, Annotation};
 
+use std::slice::Windows;
+
 /// Describes a locus position in cDNA coordinates
 #[derive(Debug)]
 pub enum CDNAPosition {
@@ -66,11 +68,66 @@ impl Display for CDNAPosition {
     }
 }
 
+fn intron_length_before_position(exons_coords: &[(u64, u64)], position: u64) -> u64 {
+    exons_coords
+        .windows(2)
+        .filter_map(|x| {
+            // Iterating through:
+            // |=============EXON=============|--------INTRON---------|=============EXON=============|
+            // ^x[0].0                        ^x[0].1                 ^x[1].0                        ^x[1].1
+
+            // Position is beyond this region. So we should count intron size
+            if position > x[1].1 {
+                Some(x[1].0 - x[0].1)
+            } else {
+                // Position is within this region
+
+                // Position is within the first exon: do not count
+                if position < x[0].1 {
+                    None
+                } else if position < x[1].0 {
+                    Some(position - x[0].1)
+                } else {
+                    Some(x[1].0 - x[0].1)
+                }
+            }
+        })
+        .sum()
+}
+
+fn intron_length_after_position(exons_coords: &[(u64, u64)], position: u64) -> u64 {
+    exons_coords
+        .windows(2)
+        .filter_map(|x| {
+            // Iterating through:
+            // |=============EXON=============|--------INTRON---------|=============EXON=============|
+            // ^x[0].0                        ^x[0].1                 ^x[1].0                        ^x[1].1
+
+            // Position is before this region. So we should count intron size
+            if position < x[0].0 {
+                Some(x[1].0 - x[0].1)
+            } else {
+                // Position is within this region
+
+                // Position is within the first exon: do not count
+                if position < x[0].1 {
+                    None
+                } else if position < x[1].0 {
+                    Some(position - x[0].1)
+                } else {
+                    Some(x[1].0 - x[0].1)
+                }
+            }
+        })
+        .sum()
+}
+
 impl CDNAPosition {
     /// Converts a 0-based genomic position into a CDNAGenomicPosition, using the provided annotations slice.
     /// Returns None if either
     pub fn from_genomic_pos(g_pos: u64, annotations: &[&Annotation]) -> Option<Self> {
         if annotations.is_empty() {
+            log::debug!("No annotations for genomic position {}", g_pos);
             return None;
         }
         //Get strandness once and for all
@@ -99,16 +156,16 @@ impl CDNAPosition {
                 .map(|a| g_tx_start - a.get_start())?,
         } + 1;
 
-        // Get 0-based pre-mRNA coordinate of pos, regardless of orientation. Will return early if negative (i.e. 5' upstream if forward, 3' downstream if reverse)
+        // Get 0-based **pre-mRNA** coordinate of pos, regardless of orientation. Will return early if negative (i.e. 5' upstream if forward, 3' downstream if reverse)
         let tx_pos = match strandness {
-            &annotation::Strand::Forward => g_pos.checked_sub(g_tx_start)?,
-            &annotation::Strand::Reverse => g_tx_start.checked_sub(g_pos)?,
+            &annotation::Strand::Forward => g_pos as i64 - g_tx_start as i64,
+            &annotation::Strand::Reverse => g_tx_start as i64 - g_pos as i64,
         };
 
         // Check if tx_pos is in bounds. Note that the previous statement already eliminated out of bounds positions
         match strandness {
-            &annotation::Strand::Forward if tx_pos > g_tx_start + tx_len => return None,
-            &annotation::Strand::Reverse if g_tx_start - tx_len < tx_pos => return None,
+            &annotation::Strand::Forward if tx_pos > (g_tx_start + tx_len) as i64 => return None,
+            &annotation::Strand::Reverse if ((g_tx_start - tx_len) as i64) < tx_pos => return None,
             _ => {}
         }
 
@@ -134,7 +191,7 @@ impl CDNAPosition {
             }
         };
 
-        // features coords are now sorted by exon
+        // features coords are now sorted by exon. They are 0-based coordinates, relative to pre-mRNA first nucleotide
         let exons_coords = {
             let mut f: Vec<_> = annotations
                 .iter()
@@ -154,37 +211,40 @@ impl CDNAPosition {
 
         // Weird variable to keep track of the distance between current exon end and start codon.
         let mut last_cds_position: i64 = 0;
+        let intron_length_before_pos = intron_length_before_position(&exons_coords, tx_pos as u64);
+
         for (exon_id, exon) in exons_coords.iter().enumerate() {
             // tx_pos is exonic
-            if tx_pos >= exon.0 && tx_pos < exon.1 {
+            if tx_pos >= exon.0 as i64 && tx_pos < exon.1 as i64 {
                 // Is it 5'UTR, coding, or 3'UTR ?
 
-                let distance_to_start_codon = exon.1 as i64 - tx_pos as i64;
+                let distance_to_start_codon =
+                    exon.1 as i64 - tx_pos as i64 - intron_length_before_pos as i64;
 
                 // Coding
-                if tx_pos >= tx_start_codon && tx_pos < tx_stop_codon {
+                if tx_pos >= tx_start_codon as i64 && tx_pos < tx_stop_codon as i64 {
                     return Some(CDNAPosition::ExonicCoding {
                         distance_to_start_codon,
                     });
                 }
                 // 5' UTR
-                else if tx_pos < tx_start_codon {
+                else if tx_pos < tx_start_codon as i64 {
                     return Some(CDNAPosition::ExonicFivePrimeUTR {
                         distance_to_start_codon,
                     });
                 }
                 // 3'UTR
-                else if tx_pos > tx_stop_codon {
+                else if tx_pos > tx_stop_codon as i64 {
                     return Some(CDNAPosition::ExonicThreePrimeUTR {
                         distance_to_stop_codon: tx_pos as i64 - tx_stop_codon as i64,
                     });
                 }
             }
             // tx_pos is intronic, we just missed it in the previous iteration
-            if tx_pos < exon.0 {
+            if tx_pos < exon.0 as i64 {
                 // Check distance to previous exon, to see which one is closer
-                if (exons_coords[exon_id - 1].1.abs_diff(tx_pos))
-                    < (exons_coords[exon_id].0.abs_diff(tx_pos))
+                if (exons_coords[exon_id - 1].1.abs_diff(tx_pos as u64))
+                    < (exons_coords[exon_id].0.abs_diff(tx_pos as u64))
                 {
                     return Some(CDNAPosition::FivePrimeIntronic {
                         last_exon_position: last_cds_position,
@@ -198,9 +258,13 @@ impl CDNAPosition {
                     });
                 }
             }
+            if tx_pos > tx_len as i64 {
+                eprintln!("g.{} is outside transcript!", g_pos);
+            }
             // First exon
             last_cds_position = if exon_id == 0 {
-                (exon.1 - exon.0) as i64 - tx_start_codon as i64
+                intron_length_before_position(&exons_coords, tx_pos as u64) as i64
+                    - tx_start_codon as i64
             } else {
                 last_cds_position + (exon.1 - exon.0) as i64
             };
@@ -213,10 +277,12 @@ impl CDNAPosition {
 mod tests {
     use crate::annotations_db;
 
+    use super::*;
+
     use super::CDNAPosition;
 
     // This GFF is an actual part of ncbiRefSeq, with hg19 coordinates.
-    const	GFF:	&'static	[u8]	=	b"chr11	ncbiRefSeq.2021-05-17	transcript	5246694	5248301	.	-	.	ID=NM_000518.5;Parent=HBB;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
+    const	GFF_HBB:	&'static	[u8]	=	b"chr11	ncbiRefSeq.2021-05-17	transcript	5246694	5248301	.	-	.	ID=NM_000518.5;Parent=HBB;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
 chr11	ncbiRefSeq.2021-05-17	exon	5246694	5246956	.	-	.	ID=NM_000518.5.3;Parent=NM_000518.5;exon_id=NM_000518.5.3;exon_number=3;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
 chr11	ncbiRefSeq.2021-05-17	exon	5247807	5248029	.	-	.	ID=NM_000518.5.2;Parent=NM_000518.5;exon_id=NM_000518.5.2;exon_number=2;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
 chr11	ncbiRefSeq.2021-05-17	exon	5248160	5248301	.	-	.	ID=NM_000518.5.1;Parent=NM_000518.5;exon_id=NM_000518.5.1;exon_number=1;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5
@@ -229,10 +295,53 @@ chr11	ncbiRefSeq.2021-05-17	start_codon	5248249	5248251	.	-	0	ID=agat-start_codo
 chr11	ncbiRefSeq.2021-05-17	stop_codon	5246828	5246830	.	-	0	ID=agat-stop_codon-34241;Parent=NM_000518.5;exon_id=NM_000518.5.3;exon_number=3;gene_id=HBB;gene_name=HBB;transcript_id=NM_000518.5";
 
     #[test]
+    fn test_intron_len_before_position() {
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 150),
+            50
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 250),
+            100
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 350),
+            150
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 450),
+            200
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 101),
+            1
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 199),
+            99
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 200),
+            100
+        );
+        assert_eq!(
+            intron_length_before_position(&vec![(0, 100), (200, 300), (400, 500)], 501),
+            200
+        );
+    }
+
+    fn test_intron_len_after_position() {
+        assert_eq!(
+            intron_length_after_position(&vec![(0, 100), (200, 300), (400, 500), (600, 700)], 250),
+            200
+        );
+    }
+
+    #[test]
     fn test_cdna_from_genomic_position() {
         // chr11:5248158A>G should be a splice donor variant with HGVS.c = c.92+2T>C
 
-        let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(GFF));
+        let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(GFF_HBB));
         let annotation_db =
             annotations_db::AnnotationsDataBase::from_reader(std::io::BufReader::new(reader), 100)
                 .unwrap();
