@@ -64,22 +64,18 @@ impl<'a> Variant2Myth<'a> {
 
         annotators[(AnnotatorsChoicesRaw::Gene as u8).ilog2() as usize].extend([]);
         annotators[(AnnotatorsChoicesRaw::Feature as u8).ilog2() as usize].extend([
-            Box::new(feature_presence::FeaturePresence::new(
-                b"upstream",
-                effect::Effect::UpstreamGeneVariant,
-            )) as Box<dyn Annotator + Send + Sync>,
-            Box::new(feature_presence::FeaturePresence::new(
-                b"downstream",
-                effect::Effect::DownstreamGeneVariant,
-            )) as Box<dyn Annotator + Send + Sync>,
-            Box::new(feature_presence::FeaturePresence::new(
-                b"5UTR",
-                effect::Effect::FivePrimeUtrVariant,
-            )) as Box<dyn Annotator + Send + Sync>,
-            Box::new(feature_presence::FeaturePresence::new(
-                b"3UTR",
-                effect::Effect::ThreePrimeUtrVariant,
-            )) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::<
+                { effect::Effect::UpstreamGeneVariant as usize },
+            >::new()) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::<
+                { effect::Effect::DownstreamGeneVariant as usize },
+            >::new()) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::<
+                { effect::Effect::FivePrimeUtrVariant as usize },
+            >::new()) as Box<dyn Annotator + Send + Sync>,
+            Box::new(feature_presence::FeaturePresence::<
+                { effect::Effect::ThreePrimeUtrVariant as usize },
+            >::new()) as Box<dyn Annotator + Send + Sync>,
         ]);
         annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].push(Box::new(
             sequence_analysis::SequenceAnalysis::new(translate, sequences),
