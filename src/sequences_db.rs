@@ -369,16 +369,16 @@ mod tests {
         let proxy = annotation_setup();
         let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
 
-        let variant = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
+        let variant = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg", None)?;
 
         assert_eq!(
             b"ATGACCgggCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.epissed_edit(&annotations, annotation::Strand::Forward, &variant,)?
+            seqdb.epissed_edit(&annotations, annotation::Strand::Forward, &variant)?
         );
 
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGcccGGTCAT".to_vec(),
-            seqdb.epissed_edit(&annotations, annotation::Strand::Reverse, &variant,)?
+            seqdb.epissed_edit(&annotations, annotation::Strand::Reverse, &variant)?
         );
 
         Ok(())
@@ -463,7 +463,7 @@ mod tests {
         let start_reverse = Some(115);
         let stop_reverse = Some(50);
 
-        let forward_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
+        let forward_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg", None)?;
         assert_eq!(
             b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
@@ -475,7 +475,7 @@ mod tests {
             )?
         );
 
-        let forward_in = variant::Variant::test_variant(b"sequence", 23, b"A", b"t");
+        let forward_in = variant::Variant::test_variant(b"sequence", 23, b"A", b"t", None)?;
         assert_eq!(
             b"ATGCAtAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
@@ -487,7 +487,7 @@ mod tests {
             )?
         );
 
-        let forward_after = variant::Variant::test_variant(b"sequence", 113, b"A", b"g");
+        let forward_after = variant::Variant::test_variant(b"sequence", 113, b"A", b"g", None)?;
         assert_eq!(
             b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
             seqdb.coding_edit(
@@ -499,7 +499,7 @@ mod tests {
             )?
         );
 
-        let reverse_before = variant::Variant::test_variant(b"sequence", 114, b"A", b"g");
+        let reverse_before = variant::Variant::test_variant(b"sequence", 114, b"A", b"g", None)?;
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
@@ -511,7 +511,7 @@ mod tests {
             )?
         );
 
-        let reverse_in = variant::Variant::test_variant(b"sequence", 61, b"A", b"g");
+        let reverse_in = variant::Variant::test_variant(b"sequence", 61, b"A", b"g", None)?;
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATAcGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
@@ -523,7 +523,7 @@ mod tests {
             )?
         );
 
-        let reverse_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg");
+        let reverse_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg", None)?;
         assert_eq!(
             b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
             seqdb.coding_edit(
@@ -555,7 +555,7 @@ mod tests {
             )?
         );
 
-        let variant = variant::Variant::test_variant(b"sequence", 23, b"A", b"t");
+        let variant = variant::Variant::test_variant(b"sequence", 23, b"A", b"t", None)?;
         assert_eq!(
             b"ATGACCGCCATGCAtAGGCTCACTGGG".to_vec(),
             seqdb.coding_edit(

@@ -68,7 +68,7 @@ mod tests {
         assert_eq!(
             obj.annotate(
                 &[&annotation],
-                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C")
+                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C", None)?
             ),
             vec![effect::Effect::FivePrimeUtrVariant]
         );
@@ -92,7 +92,7 @@ mod tests {
         assert_eq!(
             obj.annotate(
                 &[&annotation],
-                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C")
+                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C", None)?
             ),
             vec![]
         );

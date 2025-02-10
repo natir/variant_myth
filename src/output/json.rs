@@ -136,6 +136,7 @@ mod tests {
             position: 2036067340,
             ref_seq: b"T".to_vec(),
             alt_seq: b".".to_vec(),
+            variant_type: variant::Type::Small,
         });
         myth.add_annotation(annotation.build().unwrap());
 
@@ -153,6 +154,7 @@ mod tests {
             position: 1970,
             ref_seq: b"C".to_vec(),
             alt_seq: b"T".to_vec(),
+            variant_type: variant::Type::Small,
         });
 
         myth2.add_annotation(annotation2.build().unwrap());

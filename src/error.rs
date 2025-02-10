@@ -38,6 +38,10 @@ pub enum Error {
     #[error("Bad vcf record")]
     VcfBadRecord,
 
+    /// Vcf record
+    #[error("Structural variant without SVLEN")]
+    VcfStructVariantNoSvLen,
+
     /// Error in attribute name
     #[error("Attribute name not support {0}")]
     AttributeNameNotSupport(String),
