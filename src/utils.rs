@@ -3,13 +3,18 @@
 //! For now, there is only a CDNAPosition struct, to get the HGVS.c locus description from genomic position.
 use std::fmt::Display;
 
-use crate::annotation::{self, Annotation};
+use arrow::temporal_conversions::duration_ms_to_duration;
 
-use std::slice::Windows;
+use crate::annotation::{self, Annotation};
 
 /// Describes a locus position in cDNA coordinates
 #[derive(Debug)]
 pub enum CDNAPosition {
+    /// The locus is 5' of the gene/transcript
+    Upstream {
+        distance_to_start_codon: i64,
+    },
+
     /// The locus is in an exonic region, in the 5'UTR region
     ExonicFivePrimeUTR {
         /// Distance to start codon, always negative
@@ -42,12 +47,19 @@ pub enum CDNAPosition {
         /// Distance to stop codon (always positive)
         distance_to_stop_codon: i64,
     },
+
+    Downstream {
+        distance_to_stop_codon: i64,
+    },
 }
 
 impl Display for CDNAPosition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ExonicFivePrimeUTR {
+            Self::Upstream {
+                distance_to_start_codon,
+            }
+            | Self::ExonicFivePrimeUTR {
                 distance_to_start_codon,
             } => write!(f, "{}", distance_to_start_codon),
             Self::ExonicCoding {
@@ -62,6 +74,9 @@ impl Display for CDNAPosition {
                 distance_to_next_exon,
             } => write!(f, "{}{}", next_exon_position, distance_to_next_exon),
             Self::ExonicThreePrimeUTR {
+                distance_to_stop_codon,
+            }
+            | Self::Downstream {
                 distance_to_stop_codon,
             } => write!(f, "*{}", distance_to_stop_codon),
         }
@@ -124,7 +139,7 @@ fn intron_length_after_position(exons_coords: &[(u64, u64)], position: u64) -> u
 
 impl CDNAPosition {
     /// Converts a 0-based genomic position into a CDNAGenomicPosition, using the provided annotations slice.
-    /// Returns None if either
+    /// Returns None if annotations is empty. Panics if it cannot convert from genomic to CDNAPosition.
     pub fn from_genomic_pos(g_pos: u64, annotations: &[&Annotation]) -> Option<Self> {
         if annotations.is_empty() {
             log::debug!("No annotations for genomic position {}", g_pos);
@@ -138,22 +153,26 @@ impl CDNAPosition {
             &annotation::Strand::Forward => annotations
                 .iter()
                 .min_by_key(|a| a.get_start())
-                .map(|a| a.get_start())?,
+                .map(|a| a.get_start())
+                .expect("Annotation empty, should have returned None before!"),
             &annotation::Strand::Reverse => annotations
                 .iter()
                 .max_by_key(|a| a.get_stop())
-                .map(|a| a.get_stop())?,
+                .map(|a| a.get_stop())
+                .expect("Annotation empty, should have returned None before!"),
         };
 
         let tx_len = match strandness {
             &annotation::Strand::Forward => annotations
                 .iter()
                 .max_by_key(|a| a.get_stop())
-                .map(|a| a.get_stop() - g_tx_start)?,
+                .map(|a| a.get_stop() - g_tx_start)
+                .expect("Annotation empty, should have returned None before!"),
             &annotation::Strand::Reverse => annotations
                 .iter()
                 .min_by_key(|a| a.get_start())
-                .map(|a| g_tx_start - a.get_start())?,
+                .map(|a| g_tx_start - a.get_start())
+                .expect("Annotation empty, should have returned None before!"),
         } + 1;
 
         // Get 0-based **pre-mRNA** coordinate of pos, regardless of orientation. Will return early if negative (i.e. 5' upstream if forward, 3' downstream if reverse)
@@ -161,13 +180,6 @@ impl CDNAPosition {
             &annotation::Strand::Forward => g_pos as i64 - g_tx_start as i64,
             &annotation::Strand::Reverse => g_tx_start as i64 - g_pos as i64,
         };
-
-        // Check if tx_pos is in bounds. Note that the previous statement already eliminated out of bounds positions
-        match strandness {
-            &annotation::Strand::Forward if tx_pos > (g_tx_start + tx_len) as i64 => return None,
-            &annotation::Strand::Reverse if ((g_tx_start - tx_len) as i64) < tx_pos => return None,
-            _ => {}
-        }
 
         // 0-based coordinate, relative to transcript start, of the first start codon base
         let tx_start_codon = {
@@ -211,15 +223,21 @@ impl CDNAPosition {
 
         // Weird variable to keep track of the distance between current exon end and start codon.
         let mut last_cds_position: i64 = 0;
-        let intron_length_before_pos = intron_length_before_position(&exons_coords, tx_pos as u64);
 
         for (exon_id, exon) in exons_coords.iter().enumerate() {
+            // First exon
+            last_cds_position = if exon_id == 0 {
+                exon.1 as i64 - tx_start_codon as i64
+                // - intron_length_before_position(&exons_coords, exon.1) as i64
+            } else {
+                last_cds_position + (exon.1 - exon.0) as i64
+            };
+
             // tx_pos is exonic
             if tx_pos >= exon.0 as i64 && tx_pos < exon.1 as i64 {
                 // Is it 5'UTR, coding, or 3'UTR ?
 
-                let distance_to_start_codon =
-                    exon.1 as i64 - tx_pos as i64 - intron_length_before_pos as i64;
+                let distance_to_start_codon = last_cds_position - (exon.1 as i64 - tx_pos) + 1;
 
                 // Coding
                 if tx_pos >= tx_start_codon as i64 && tx_pos < tx_stop_codon as i64 {
@@ -230,46 +248,61 @@ impl CDNAPosition {
                 // 5' UTR
                 else if tx_pos < tx_start_codon as i64 {
                     return Some(CDNAPosition::ExonicFivePrimeUTR {
-                        distance_to_start_codon,
+                        distance_to_start_codon: distance_to_start_codon - 1,
                     });
                 }
                 // 3'UTR
-                else if tx_pos > tx_stop_codon as i64 {
+                else if tx_pos >= tx_stop_codon as i64 {
                     return Some(CDNAPosition::ExonicThreePrimeUTR {
-                        distance_to_stop_codon: tx_pos as i64 - tx_stop_codon as i64,
+                        distance_to_stop_codon: tx_pos as i64 - tx_stop_codon as i64 + 1,
                     });
                 }
             }
-            // tx_pos is intronic, we just missed it in the previous iteration
+            // tx_pos is either intronic (we just missed it in the previous iteration), or it is upstream...
             if tx_pos < exon.0 as i64 {
+                // Upstream variant
+                if tx_pos < 0 {
+                    return Some(CDNAPosition::Upstream {
+                        distance_to_start_codon: (tx_pos - tx_start_codon as i64),
+                    });
+                }
+
                 // Check distance to previous exon, to see which one is closer
                 if (exons_coords[exon_id - 1].1.abs_diff(tx_pos as u64))
                     < (exons_coords[exon_id].0.abs_diff(tx_pos as u64))
                 {
                     return Some(CDNAPosition::FivePrimeIntronic {
-                        last_exon_position: last_cds_position,
+                        last_exon_position: last_cds_position - (exon.1 - exon.0) as i64,
                         distance_to_prev_exon: tx_pos as i64 - exons_coords[exon_id - 1].1 as i64
                             + 1,
                     });
                 } else {
                     return Some(CDNAPosition::ThreePrimeIntronic {
-                        next_exon_position: last_cds_position + 1,
+                        next_exon_position: last_cds_position - (exon.1 - exon.0) as i64 + 1,
                         distance_to_next_exon: tx_pos as i64 - exon.0 as i64,
                     });
                 }
             }
+
+            // Downstream variant
             if tx_pos > tx_len as i64 {
-                eprintln!("g.{} is outside transcript!", g_pos);
+                return Some(CDNAPosition::Downstream {
+                    distance_to_stop_codon: tx_pos - tx_stop_codon as i64 + 1, // + intron_length_after_position(&exons_coords, tx_pos as u64) as i64,
+                });
             }
-            // First exon
-            last_cds_position = if exon_id == 0 {
-                intron_length_before_position(&exons_coords, tx_pos as u64) as i64
-                    - tx_start_codon as i64
-            } else {
-                last_cds_position + (exon.1 - exon.0) as i64
-            };
         }
-        None
+        unreachable!(
+            "\ng position:{}\ntx_pos:{}\ntx_start:{}\ntx_end:{}\ntx_length:{}\nStrandness:{:?}",
+            g_pos,
+            tx_pos,
+            g_tx_start,
+            match strandness {
+                &annotation::Strand::Forward => g_tx_start + tx_len,
+                &annotation::Strand::Reverse => g_tx_start - tx_len,
+            },
+            tx_len,
+            strandness
+        );
     }
 }
 
@@ -330,7 +363,12 @@ chr11	ncbiRefSeq.2021-05-17	stop_codon	5246828	5246830	.	-	0	ID=agat-stop_codon-
         );
     }
 
+    #[test]
     fn test_intron_len_after_position() {
+        assert_eq!(
+            intron_length_after_position(&vec![(0, 100), (200, 300), (400, 500), (600, 700)], 250),
+            200
+        );
         assert_eq!(
             intron_length_after_position(&vec![(0, 100), (200, 300), (400, 500), (600, 700)], 250),
             200
