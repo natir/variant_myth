@@ -7,6 +7,7 @@
 /* project use */
 use crate::annotation;
 use crate::effect;
+use crate::memoizor;
 use crate::variant;
 use crate::variant2myth;
 
@@ -24,10 +25,14 @@ impl FeaturePresence {
 impl variant2myth::Annotator for FeaturePresence {
     fn annotate(
         &self,
-        annotations: &[&annotation::Annotation],
         _variant: &variant::Variant,
+        memoizor: &mut memoizor::Memoizor,
     ) -> Vec<effect::Effect> {
-        if annotations.iter().any(|a| a.get_feature() == self.name) {
+        if memoizor
+            .not_coding_annotation()
+            .iter()
+            .any(|a| a.get_feature() == self.name)
+        {
             vec![self.effect.clone()]
         } else {
             vec![]

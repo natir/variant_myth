@@ -15,6 +15,7 @@ pub mod annotation;
 pub mod annotations_db;
 pub mod effect;
 pub mod error;
+pub mod memoizor;
 pub mod myth;
 pub mod output;
 pub mod sequences_db;
