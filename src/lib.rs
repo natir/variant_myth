@@ -25,7 +25,7 @@ pub mod variant2myth;
 #[cfg(feature = "cli")]
 pub mod cli;
 
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 fn serialize_bstr<T, S>(v: T, serializer: S) -> Result<S::Ok, S::Error>
 where
     T: AsRef<[u8]>,

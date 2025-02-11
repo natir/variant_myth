@@ -163,10 +163,10 @@ impl Command {
 #[derive(clap::Subcommand, std::fmt::Debug)]
 pub enum OutputSubCommand {
     /// Output are write in parquet format
-    #[cfg(feature = "out_parquet")]
+    #[cfg(feature = "parquet")]
     Parquet(Parquet),
     /// Output are write in json format
-    #[cfg(feature = "out_json")]
+    #[cfg(feature = "json")]
     Json(Json),
 }
 
@@ -174,9 +174,9 @@ impl OutputSubCommand {
     /// Create myth writer
     pub fn writers(&self) -> error::Result<Vec<Box<dyn output::MythWriter + std::marker::Send>>> {
         match self {
-            #[cfg(feature = "out_parquet")]
+            #[cfg(feature = "parquet")]
             OutputSubCommand::Parquet(obj) => obj.writers(),
-            #[cfg(feature = "out_json")]
+            #[cfg(feature = "json")]
             OutputSubCommand::Json(obj) => obj.writers(),
         }
     }
@@ -184,7 +184,7 @@ impl OutputSubCommand {
 
 /// Output are write in parquet format
 #[derive(clap::Args, std::fmt::Debug)]
-#[cfg(feature = "out_parquet")]
+#[cfg(feature = "parquet")]
 pub struct Parquet {
     /// Output path
     #[clap(short = 'p', long = "path", required = true)]
@@ -195,7 +195,7 @@ pub struct Parquet {
     block_size: Option<usize>,
 }
 
-#[cfg(feature = "out_parquet")]
+#[cfg(feature = "parquet")]
 impl Parquet {
     /// Create myth writer
     pub fn writers(&self) -> error::Result<Vec<Box<dyn output::MythWriter + std::marker::Send>>> {
@@ -220,7 +220,7 @@ impl Parquet {
 
 /// Output are write in json format
 #[derive(clap::Args, std::fmt::Debug)]
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 pub struct Json {
     /// Output path
     #[clap(short = 'p', long = "path", required = true)]
@@ -231,7 +231,7 @@ pub struct Json {
     json_format: Option<output::JsonFormat>,
 }
 
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 impl Json {
     /// Create myth writer
     pub fn writers(&self) -> error::Result<Vec<Box<dyn output::MythWriter + std::marker::Send>>> {

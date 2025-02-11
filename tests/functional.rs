@@ -1,12 +1,12 @@
 /* std use */
 
 /* crate use */
-#[cfg(not(feature = "out_json"))]
+#[cfg(not(feature = "json"))]
 use arrow::array::Array as _;
 
 /* project use */
 
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 fn dive_in_tree(object: serde_json::Value, objects: &mut ahash::AHashSet<String>) -> () {
     match object {
         serde_json::Value::Null => (),
@@ -31,7 +31,7 @@ fn dive_in_tree(object: serde_json::Value, objects: &mut ahash::AHashSet<String>
     }
 }
 
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 fn compare_by_record<P, R>(truth_path: P, result_path: R) -> anyhow::Result<()>
 where
     P: std::convert::AsRef<std::path::Path>,
@@ -60,7 +60,7 @@ where
     Ok(())
 }
 
-#[cfg(not(feature = "out_json"))]
+#[cfg(not(feature = "json"))]
 fn compare_by_record<P, R>(truth_path: P, result_path: R) -> anyhow::Result<()>
 where
     P: std::convert::AsRef<std::path::Path>,
@@ -220,7 +220,7 @@ fn annotator_gene() -> anyhow::Result<()> {
     }
 
     let mut output_path = tmp_path.join("myth");
-    if cfg!(feature = "out_json") {
+    if cfg!(feature = "json") {
         output_path.set_extension("json");
         args.extend(["json", "-p", output_path.to_str().unwrap(), "-f", "nd-json"]);
     } else {
@@ -241,7 +241,7 @@ fn annotator_gene() -> anyhow::Result<()> {
         return Err(e.into());
     }
 
-    if cfg!(feature = "out_json") {
+    if cfg!(feature = "json") {
         truth_path.set_extension("json");
     } else {
         truth_path.set_extension("parquet");
@@ -283,7 +283,7 @@ fn annotator_feature() -> anyhow::Result<()> {
     }
 
     let mut output_path = tmp_path.join("myth");
-    if cfg!(feature = "out_json") {
+    if cfg!(feature = "json") {
         output_path.set_extension("json");
         args.extend(["json", "-p", output_path.to_str().unwrap(), "-f", "nd-json"]);
     } else {
@@ -304,7 +304,7 @@ fn annotator_feature() -> anyhow::Result<()> {
         return Err(e.into());
     }
 
-    if cfg!(feature = "out_json") {
+    if cfg!(feature = "json") {
         truth_path.set_extension("json");
     } else {
         truth_path.set_extension("parquet");
