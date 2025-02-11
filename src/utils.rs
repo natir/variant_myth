@@ -3,8 +3,6 @@
 //! For now, there is only a CDNAPosition struct, to get the HGVS.c locus description from genomic position.
 use std::fmt::Display;
 
-use arrow::temporal_conversions::duration_ms_to_duration;
-
 use crate::annotation::{self, Annotation};
 
 /// Describes a locus position in cDNA coordinates
@@ -12,6 +10,7 @@ use crate::annotation::{self, Annotation};
 pub enum CDNAPosition {
     /// The locus is 5' of the gene/transcript
     Upstream {
+        /// Distance to start codon, always negative
         distance_to_start_codon: i64,
     },
 
@@ -48,7 +47,9 @@ pub enum CDNAPosition {
         distance_to_stop_codon: i64,
     },
 
+    /// The locus is 3' of the gene/transcript
     Downstream {
+        /// Distance to stop codon (always positive)
         distance_to_stop_codon: i64,
     },
 }
@@ -119,19 +120,10 @@ fn intron_length_after_position(exons_coords: &[(u64, u64)], position: u64) -> u
             // ^x[0].0                        ^x[0].1                 ^x[1].0                        ^x[1].1
 
             // Position is before this region. So we should count intron size
-            if position < x[0].0 {
+            if position < x[1].0 {
                 Some(x[1].0 - x[0].1)
             } else {
-                // Position is within this region
-
-                // Position is within the first exon: do not count
-                if position < x[0].1 {
-                    None
-                } else if position < x[1].0 {
-                    Some(position - x[0].1)
-                } else {
-                    Some(x[1].0 - x[0].1)
-                }
+                None
             }
         })
         .sum()
@@ -203,6 +195,13 @@ impl CDNAPosition {
             }
         };
 
+        // Upstream variant: Early return
+        if tx_pos < 0 {
+            return Some(CDNAPosition::Upstream {
+                distance_to_start_codon: (tx_pos - tx_start_codon as i64),
+            });
+        }
+
         // features coords are now sorted by exon. They are 0-based coordinates, relative to pre-mRNA first nucleotide
         let exons_coords = {
             let mut f: Vec<_> = annotations
@@ -221,14 +220,23 @@ impl CDNAPosition {
             f
         };
 
+        // Downstream variant: Early return as well (but we need introns information)
+        if tx_pos > tx_len as i64 {
+            return Some(CDNAPosition::Downstream {
+                distance_to_stop_codon: tx_pos - tx_stop_codon as i64 + 1
+                    - intron_length_after_position(&exons_coords, tx_stop_codon) as i64, // Account for 5'UTR-only exons
+            });
+        }
+
         // Weird variable to keep track of the distance between current exon end and start codon.
         let mut last_cds_position: i64 = 0;
 
         for (exon_id, exon) in exons_coords.iter().enumerate() {
             // First exon
             last_cds_position = if exon_id == 0 {
-                exon.1 as i64 - tx_start_codon as i64
-                // - intron_length_before_position(&exons_coords, exon.1) as i64
+                exon.1 as i64
+                    - tx_start_codon as i64
+                    - intron_length_before_position(&exons_coords, exon.1) as i64
             } else {
                 last_cds_position + (exon.1 - exon.0) as i64
             };
@@ -260,13 +268,6 @@ impl CDNAPosition {
             }
             // tx_pos is either intronic (we just missed it in the previous iteration), or it is upstream...
             if tx_pos < exon.0 as i64 {
-                // Upstream variant
-                if tx_pos < 0 {
-                    return Some(CDNAPosition::Upstream {
-                        distance_to_start_codon: (tx_pos - tx_start_codon as i64),
-                    });
-                }
-
                 // Check distance to previous exon, to see which one is closer
                 if (exons_coords[exon_id - 1].1.abs_diff(tx_pos as u64))
                     < (exons_coords[exon_id].0.abs_diff(tx_pos as u64))
@@ -283,16 +284,9 @@ impl CDNAPosition {
                     });
                 }
             }
-
-            // Downstream variant
-            if tx_pos > tx_len as i64 {
-                return Some(CDNAPosition::Downstream {
-                    distance_to_stop_codon: tx_pos - tx_stop_codon as i64 + 1, // + intron_length_after_position(&exons_coords, tx_pos as u64) as i64,
-                });
-            }
         }
         unreachable!(
-            "\ng position:{}\ntx_pos:{}\ntx_start:{}\ntx_end:{}\ntx_length:{}\nStrandness:{:?}",
+            "\nGenomic position: g.{}\nPre-mRNA transcript position:r.{}\nTranscript start:g.{}\nTranscript end:g.{}\nTranscript length:{}\nStrandness:{:?}",
             g_pos,
             tx_pos,
             g_tx_start,
@@ -370,8 +364,8 @@ chr11	ncbiRefSeq.2021-05-17	stop_codon	5246828	5246830	.	-	0	ID=agat-stop_codon-
             200
         );
         assert_eq!(
-            intron_length_after_position(&vec![(0, 100), (200, 300), (400, 500), (600, 700)], 250),
-            200
+            intron_length_after_position(&vec![(0, 100), (200, 300), (400, 500), (600, 700)], 650),
+            0
         );
     }
 
