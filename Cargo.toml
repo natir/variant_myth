@@ -75,6 +75,7 @@ parallel    = ["dep:rayon", "clairiere/parallel"]
 parquet = ["dep:arrow", "dep:parquet"]
 json    = ["dep:serde", "dep:serde_json"]
 
+# dev feature
 bench       = []
 
 

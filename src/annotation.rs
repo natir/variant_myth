@@ -53,9 +53,9 @@ impl std::fmt::Display for Frame {
 /// Store attribute of gff record
 #[derive(Debug, Clone, std::default::Default, PartialEq, Eq)]
 pub struct Attribute {
-    id: Vec<u8>,     // ID=
-    name: Vec<u8>,   // Name=
-    parent: Vec<u8>, // Parent=
+    pub(crate) id: Vec<u8>,     // ID=
+    pub(crate) name: Vec<u8>,   // Name=
+    pub(crate) parent: Vec<u8>, // Parent=
 }
 
 impl Attribute {
@@ -150,15 +150,15 @@ impl Eq for Score {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Store information of a Gff3 field
 pub struct Annotation {
-    seqname: Vec<u8>,
-    source: Vec<u8>,
-    feature: Vec<u8>,
-    start: u64,
-    stop: u64,
-    score: Score,
-    strand: Strand,
-    frame: Frame,
-    attribute: Attribute,
+    pub(crate) seqname: Vec<u8>,
+    pub(crate) source: Vec<u8>,
+    pub(crate) feature: Vec<u8>,
+    pub(crate) start: u64,
+    pub(crate) stop: u64,
+    pub(crate) score: Score,
+    pub(crate) strand: Strand,
+    pub(crate) frame: Frame,
+    pub(crate) attribute: Attribute,
 }
 
 impl Annotation {

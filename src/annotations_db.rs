@@ -181,79 +181,32 @@ mod tests {
     /* std use */
 
     /* crate use */
-    use bstr::ByteSlice as _;
-
-    use crate::annotation::Annotation;
 
     /* project use */
     use super::*;
-    use crate::tests::GFF;
+    use crate::test_data::GFF;
+    use crate::test_data::GFF_ANNOTATION;
 
     #[test]
     fn annotations() -> error::Result<()> {
-        let file = GFF.replace(b"{0}", b"chr1");
-
-        let b1 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[..76].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
-
-        let b2 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[77..197].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
-
-        let b3 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[198..291].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
-
-        let b4 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[292..374].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
-
-        let b5 = Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[460..555].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
-
-        let mut truth = vec![&b1, &b2, &b4];
+        let mut truth = vec![&GFF_ANNOTATION[0], &GFF_ANNOTATION[1]];
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
-        let reader: Box<dyn std::io::Read + Send> = Box::new(std::io::Cursor::new(file));
+        let reader: Box<dyn std::io::Read + Send> = Box::new(GFF);
         let annotations = AnnotationsDataBase::from_reader(std::io::BufReader::new(reader), 100)?;
 
-        let mut result = annotations.get_annotations(b"chr1", 840..841);
+        let mut result = annotations.get_annotations(b"chrA", 13250..13251);
         result.sort_by_key(|a| (a.get_start(), a.get_stop()));
         assert_eq!(result, truth);
 
-        let mut truth = vec![b3, b5];
+        let mut truth = GFF_ANNOTATION[3..8].to_vec();
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
         let result = annotations
-            .get_coding_annotation(b2.get_attribute().get_id())
+            .get_coding_annotation(GFF_ANNOTATION[1].get_attribute().get_id())
             .unwrap();
         let mut value = result.clone();
         value.sort_by_key(|a| (a.get_start(), a.get_stop()));
-        assert_eq!(value.len(), 8);
-
-        value = value[..2].to_vec();
         assert_eq!(value, truth);
 
         // seqname not present

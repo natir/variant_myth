@@ -7,6 +7,7 @@
 /* project use */
 use crate::annotation;
 use crate::effect;
+use crate::memoizor;
 use crate::sequences_db;
 use crate::translate;
 use crate::variant;
@@ -32,39 +33,41 @@ impl<'a> SequenceAnalysis<'a> {
 impl variant2myth::Annotator for SequenceAnalysis<'_> {
     fn annotate(
         &self,
-        annotations: &[&annotation::Annotation],
         variant: &variant::Variant,
+        memoizor: &mut memoizor::Memoizor,
     ) -> Vec<effect::Effect> {
-        let start_position = annotations
+        let start_position = memoizor
+            .coding_annotation()
+            .unwrap()
             .iter()
             .find(|&x| x.get_feature() == b"start_codon")
             .map(|x| x.get_start());
 
-        let stop_position = annotations
+        let stop_position = memoizor
+            .coding_annotation()
+            .unwrap()
             .iter()
             .find(|&x| x.get_feature() == b"stop_codon")
             .map(|x| x.get_stop());
 
-        let exon_annot = annotations
-            .iter()
-            .filter(|a| a.get_feature() == b"exon")
-            .cloned()
-            .collect::<Vec<&annotation::Annotation>>();
-
-        let strand = annotations
-            .first()
+        let strand = memoizor
+            .transcript()
             .map(|x| x.get_strand())
-            .unwrap_or(&annotation::Strand::Forward);
+            .cloned()
+            .unwrap_or(annotation::Strand::Forward);
+
+        let exon_annot = memoizor.exons_annotation();
+        let exon_annot_proxy = exon_annot.iter().collect::<Vec<&annotation::Annotation>>();
 
         // No exon in associate annotation no sequence analysis
-        if exon_annot.is_empty() {
+        if exon_annot_proxy.is_empty() {
             return vec![];
         }
 
         let coding =
             match self
                 .sequences
-                .coding(&exon_annot, *strand, start_position, stop_position)
+                .coding(&exon_annot_proxy, strand, start_position, stop_position)
             {
                 Ok(sequence) => sequence,
                 Err(error) => {
@@ -74,8 +77,8 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
             };
 
         let coding_var = match self.sequences.coding_edit(
-            &exon_annot,
-            *strand,
+            &exon_annot_proxy,
+            strand,
             variant,
             start_position,
             stop_position,
@@ -101,7 +104,13 @@ impl variant2myth::Annotator for SequenceAnalysis<'_> {
             log::debug!("VARIANT : {}", variant);
             log::debug!(
                 "ID      : {}",
-                String::from_utf8(annotations[0].get_attribute().get_id().to_vec()).unwrap()
+                String::from_utf8(
+                    memoizor.coding_annotation().unwrap()[0]
+                        .get_attribute()
+                        .get_id()
+                        .to_vec()
+                )
+                .unwrap()
             );
         }
 

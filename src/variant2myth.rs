@@ -9,9 +9,9 @@ mod feature_presence;
 mod sequence_analysis;
 
 /* project use */
-use crate::annotation;
 use crate::annotations_db;
 use crate::effect;
+use crate::memoizor;
 use crate::myth;
 use crate::sequences_db;
 use crate::translate;
@@ -39,14 +39,15 @@ pub type AnnotatorsChoices = enumflags2::BitFlags<AnnotatorsChoicesRaw>;
 trait Annotator {
     fn annotate(
         &self,
-        annotations: &[&annotation::Annotation],
         variant: &variant::Variant,
+        memoizor: &mut memoizor::Memoizor,
     ) -> Vec<effect::Effect>;
 }
 
 /// Struct that associate to a variant myth
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
+    sequences: &'a sequences_db::SequencesDataBase,
     annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync + 'a>>; 5],
     annotators_choices: AnnotatorsChoices,
 }
@@ -88,6 +89,7 @@ impl<'a> Variant2Myth<'a> {
 
         Self {
             annotations,
+            sequences,
             annotators,
             annotators_choices,
         }
@@ -97,7 +99,7 @@ impl<'a> Variant2Myth<'a> {
     pub fn myth(&self, variant: variant::Variant) -> myth::Myth {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
-        // Detect not normalize variant
+        // Ignore not variant we could manage
         if !variant.valid() {
             myth.add_annotation(
                 myth::AnnotationMyth::from_nowhere()
@@ -126,6 +128,7 @@ impl<'a> Variant2Myth<'a> {
             return myth;
         }
 
+        // Add myth with gene associate information
         if self.annotators_choices.contains(AnnotatorsChoicesRaw::Gene) {
             for gene in not_coding_annotations
                 .iter()
@@ -140,57 +143,37 @@ impl<'a> Variant2Myth<'a> {
             }
         }
 
-        // Group annotation by transcript
-        let mut transcript2annotations = ahash::AHashMap::new();
-        for annotation in not_coding_annotations {
-            let entry = if annotation.get_feature() == b"transcript" {
-                transcript2annotations.entry(annotation.get_attribute().get_id())
+        // Get unique transcript
+        let mut transcripts = ahash::AHashSet::new();
+        for annotation in not_coding_annotations.iter() {
+            if annotation.get_feature() == b"transcript" {
+                transcripts.insert(annotation.get_attribute().get_id())
             } else {
-                transcript2annotations.entry(annotation.get_attribute().get_parent())
+                transcripts.insert(annotation.get_attribute().get_parent())
             };
-            entry
-                .and_modify(|x: &mut Vec<&annotation::Annotation>| x.push(annotation))
-                .or_insert(vec![annotation]);
         }
 
-        for (transcript_id, annotations) in transcript2annotations.iter() {
+        for transcript_id in transcripts.iter() {
+            let mut memoizor = memoizor::Memoizor::new(
+                transcript_id,
+                self.annotations,
+                self.sequences,
+                &not_coding_annotations,
+            );
+
             // found transcript annotations
-            let mut annotation_myth =
-                if let Some(transcript_annot) = self.annotations.get_transcript(transcript_id) {
-                    myth::AnnotationMyth::from_annotation(transcript_annot).effects(vec![])
-                } else {
-                    continue;
-                };
+            let mut annotation_myth = if let Some(transcript_annot) = memoizor.transcript() {
+                myth::AnnotationMyth::from_annotation(transcript_annot).effects(vec![])
+            } else {
+                continue;
+            };
 
             for flag in self.annotators_choices.iter() {
-                match flag {
-                    // Annotators choices flag required acces to coding annotation
-                    AnnotatorsChoicesRaw::Hgvs | AnnotatorsChoicesRaw::Effect => {
-                        if let Some(coding_annotation) =
-                            self.annotations.get_coding_annotation(transcript_id)
-                        {
-                            let proxy = coding_annotation
-                                .iter()
-                                .collect::<Vec<&annotation::Annotation>>(); // TODO: found a solution to remove this
-
-                            self.annotators[(flag as u8).ilog2() as usize]
-                                .iter()
-                                .for_each(|a| {
-                                    annotation_myth.extend_effect(&a.annotate(&proxy, &variant))
-                                });
-                        } else {
-                            continue;
-                        }
-                    }
-                    // Annotators choices flag not required acces to coding annotation
-                    _ => {
-                        self.annotators[(flag as u8).ilog2() as usize]
-                            .iter()
-                            .for_each(|a| {
-                                annotation_myth.extend_effect(&a.annotate(annotations, &variant))
-                            });
-                    }
-                }
+                self.annotators[(flag as u8).ilog2() as usize]
+                    .iter()
+                    .for_each(|a| {
+                        annotation_myth.extend_effect(&a.annotate(&variant, &mut memoizor));
+                    })
             }
 
             myth.add_annotation(annotation_myth.build().unwrap()) // No possible error in build
