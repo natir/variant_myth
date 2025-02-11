@@ -95,6 +95,11 @@ impl Attribute {
     pub fn get_parent(&self) -> &[u8] {
         &self.parent
     }
+
+    /// Get exon_number
+    pub fn set_parent(&mut self, value: Vec<u8>) {
+        self.parent = value
+    }
 }
 
 impl std::fmt::Display for Attribute {
@@ -192,10 +197,14 @@ impl Annotation {
         }
     }
 
-    /// Build annotation from another Annotation and set feature
-    pub fn from_annotation(a: &Self, feature: &[u8]) -> Self {
+    /// Build annotation from another Annotation, set feature, start, stop, new feature parent is actual feature
+    pub fn create_child(a: &Self, feature: &[u8], start: u64, stop: u64) -> Self {
         let mut obj = a.clone();
         obj.feature = feature.to_vec();
+        obj.start = start;
+        obj.stop = stop;
+        obj.attribute.set_parent(a.attribute.get_id().to_vec());
+
         obj
     }
 
@@ -374,7 +383,7 @@ mod tests {
         );
 
         // Change exon
-        let annotation = Annotation::from_annotation(&annotation, b"exon");
+        let annotation = Annotation::create_child(&annotation, b"exon", 29554, 31097);
 
         assert_eq!(annotation.get_feature(), b"exon");
 

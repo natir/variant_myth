@@ -2,6 +2,7 @@
 
 # std import
 import argparse
+import copy
 import csv
 import gzip
 import logging
@@ -26,7 +27,7 @@ GFF_PARENT_REGEX = re.compile(r"Parent=(?P<parent>[^;]+)")
 
 
 def is_gz(filepath: pathlib.Path):
-    """Return true if first two bit match gzip magic number"""
+    """Return true if first two bit match gzip magic number."""
     with open(filepath, "rb") as fh:
         return fh.read(2) == b"\x1f\x8b"
 
@@ -46,7 +47,7 @@ def random_seq(length: int) -> str:
 
 def edit_record(record: list[str], chrom: str, new_start: int) -> list[str]:
     """Edit gff record."""
-
+    record = copy.deepcopy(record)
     prev_begin = int(record[3])
     prev_end = int(record[4])
     new_end = new_start + prev_end - prev_begin
@@ -58,9 +59,64 @@ def edit_record(record: list[str], chrom: str, new_start: int) -> list[str]:
     return record
 
 
+def parse_annotations(
+    input_path: pathlib.Path,
+) -> (dict[str, list[str]], dict[str, list[str]], dict[str, list[list[str]]]):
+    """Read gff file."""
+    id2record: dict[str, list[str]] = {}
+    feature2id: dict[str, list[str]] = defaultdict(list)
+    parent2child: dict[str : list[list[str]]] = defaultdict(list)
+
+    exclude_variant = {"chrX", "chrY", "chrMT"}
+
+    with open_file(input_path) as fh:
+        reader = csv.reader(filter(lambda row: row[0] != "#", fh), delimiter="\t")
+        for record in reader:
+            if record[0] in exclude_variant:
+                continue
+
+            if id_match := GFF_ID_REGEX.search(record[8]):
+                id2record[id_match.groupdict()["id"]] = record
+
+                feature2id[record[2]].append(id_match.groupdict()["id"])
+                if parent_match := GFF_PARENT_REGEX.search(record[8]):
+                    parent2child[parent_match.groupdict()["parent"]].append(
+                        id_match.groupdict()["id"]
+                    )
+
+    return (id2record, feature2id, parent2child)
+
+
+def parse_seq(input_path: pathlib.Path) -> dict[str, str]:
+    """Parse fasta file."""
+    chr2seq_ = defaultdict(list)
+    with open_file(input_path) as fh:
+        for line in fh:
+            if line.startswith(">"):
+                current_chr = line.strip().split()[0][1:]
+            else:
+                chr2seq_[current_chr].append(line.strip())
+
+    return {k: "".join(v) for k, v in chr2seq_.items()}
+
+
+def parse_variant(input_path: pathlib.Path) -> dict[str, list[(int, str, str)]]:
+    """Parse vcf file."""
+    chr2variant_ = defaultdict(list)
+    with open_file(input_path) as fh:
+        reader = csv.reader(filter(lambda row: row[0] != "#", fh), delimiter="\t")
+        for record in reader:
+            chr2variant_[record[0]].append((int(record[1]), record[3], record[4].split(",")[0]))
+
+    chr2variant = {
+        key: sorted(value, key=lambda v: v[0]) for (key, value) in chr2variant_.items()
+    }
+
+    return chr2variant
+
+
 def download() -> int:
     """Download  example input file."""
-
     os.makedirs("data", exist_ok=True)
 
     logging.info("Start download annotations")
@@ -90,12 +146,13 @@ def download() -> int:
 def subsample(
     annotations_input: pathlib.Path,
     references_input: pathlib.Path,
+    variants_input: pathlib.Path,
     annotations_output: pathlib.Path,
     references_output: pathlib.Path,
     variants_output: pathlib.Path,
     seed: int,
 ) -> int:
-    """Extract some information in input to generate a fake genome"""
+    """Extract some information in input to generate a fake genome."""
     random.seed(seed)
 
     ###############
@@ -108,56 +165,42 @@ def subsample(
 
     nb_chromosome = 3
     chr_name = [f"chr{a}" for a in string.ascii_uppercase[:nb_chromosome]]
-    gene_dist_range = (50, 500)
+    gene_dist_range = (50, 5000)
 
-    nb_snv = 20
+    max_variant_per_gene = 5
+    nb_random_variant = 10
     nb_mnv = 20
     mnv_range = (2, 5)
     nb_struct = 10
     struct_type = ["INS", "DEL", "DUP", "INV", "CNV"]
-    struct_len = (50, 1000)
+    struct_len = (500, 1000)
     logging.info("End generate target value")
 
     #################
     # Read annotation
     #################
     logging.info("Start read annotation input")
-    id2record: dict[str, list[str]] = {}
-    feature2id: dict[str, list[str]] = defaultdict(list)
-    parent2child: dict[str : list[list[str]]] = defaultdict(list)
-    with open_file(annotations_input) as fh:
-        reader = csv.reader(filter(lambda row: row[0] != "#", fh), delimiter="\t")
-        for record in reader:
-            if id_match := GFF_ID_REGEX.search(record[8]):
-                id2record[id_match.groupdict()["id"]] = record
-
-                feature2id[record[2]].append(id_match.groupdict()["id"])
-                if parent_match := GFF_PARENT_REGEX.search(record[8]):
-                    parent2child[parent_match.groupdict()["parent"]].append(
-                        id_match.groupdict()["id"]
-                    )
-
+    (id2record, feature2id, parent2child) = parse_annotations(annotations_input)
     logging.info("End read annotation input")
 
     ###############
     # Read sequence
     ###############
     logging.info("Start read reference input")
-    chr2seq_ = defaultdict(list)
-    with open_file(references_input) as fh:
-        for index, line in enumerate(fh):
-            if line.startswith(">"):
-                current_chr = line.strip().split()[0][1:]
-            else:
-                chr2seq_[current_chr].append(line.strip())
-
-    chr2seq_in = {k: "".join(v) for k, v in chr2seq_.items()}
+    chr2seq_in = parse_seq(references_input)
     logging.info("End read reference input")
 
+    ###############
+    # Read variants
+    ###############
+    logging.info("Start read variant input")
+    chr2variant = parse_variant(variants_input)
+    logging.info("End read variant input")
+
     logging.info("Start extract and edit annotation")
-    ####################
-    # Extract annotation
-    ####################
+    ###################
+    # Choose annotation
+    ###################
     random.shuffle(feature2id["gene"])
 
     nb_transcript2gene_id = defaultdict(list)
@@ -175,6 +218,7 @@ def subsample(
     chr2position = {name: 1 for name in chr_name}
     chr2seq_ = {name: [] for name in chr_name}
 
+    id2new_record = {}
     select_record = []
     for gene_id in select_gene_id:
         # Get random value
@@ -190,7 +234,9 @@ def subsample(
         prev_end = int(record[4])
 
         # Edit record and child
-        select_record.append(edit_record(record, choose_chr, start_position))
+        new_record = edit_record(copy.deepcopy(record), choose_chr, start_position)
+        id2new_record[gene_id] = new_record
+        select_record.append(new_record)
         for transcript_id in parent2child[gene_id]:
             transcript_record = id2record[transcript_id]
             new_start = start_position + int(transcript_record[3]) - prev_begin
@@ -219,15 +265,49 @@ def subsample(
         '##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">'
     )
     variant_out.append("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO")
+
+    ##################################
+    # Select Single Nucleotive Variant
+    ##################################
+    select_variants = []
+    for gene_id in select_gene_id:
+        old_record = id2record[gene_id]
+        new_record = id2new_record[gene_id]
+
+        gene_variant = []
+        for variant in chr2variant[old_record[0]]:
+            if int(variant[0]) < int(old_record[3]):
+                continue
+            if int(variant[0]) < int(old_record[4]):
+                gene_variant.append(variant)
+            else:
+                break
+
+        for select_variant in random.sample(
+            gene_variant, min(len(gene_variant), max_variant_per_gene)
+        ):
+            pos_delta = int(select_variant[0]) - int(old_record[3])
+            select_variants.append(
+                [
+                    new_record[0],
+                    int(new_record[3]) + pos_delta,
+                    select_variant[1],
+                    select_variant[2],
+                ]
+            )
+
     ####################################
     # Generate Single Nucleotive Variant
     ####################################
-    for _ in range(nb_snv):
+    for _ in range(nb_random_variant):
         chrom = random.choice(chr_name)
         pos = random.randint(1, len(chr2seq_out[chrom]))
         ref = chr2seq_out[chrom][pos]
         alt = random.choice([nuc for nuc in "actg" if nuc.upper() != ref.upper()])
 
+        select_variants.append([chrom, pos, ref, alt])
+
+    for chrom, pos, ref, alt in select_variants:
         variant_out.append(f"{chrom}\t{pos}\t.\t{ref}\t{alt}\t99\tPASS\t.")
 
     ####################################
@@ -253,6 +333,7 @@ def subsample(
     ########################################
     for _ in range(nb_struct):
         sv_type = random.choice(struct_type)
+        chrom = random.choice(chr_name)
         pos = random.randint(1, len(chr2seq_out[chrom]))
         ref = chr2seq_out[chrom][pos]
         length = random.randint(struct_len[0], struct_len[1])
@@ -261,7 +342,6 @@ def subsample(
             f"{chrom}\t{pos}\t.\t{ref}\t<{sv_type}>\t99\tPASS\tSVLEN={length}"
         )
     logging.info("End generate variant")
-
 
     ##################
     # Write annotation
@@ -320,6 +400,12 @@ if __name__ == "__main__":
         "--references-input",
         type=pathlib.Path,
         help="reference sequence input path",
+    )
+    subsample_parser.add_argument(
+        "-v",
+        "--variants-input",
+        type=pathlib.Path,
+        help="variant input path",
     )
     subsample_parser.add_argument(
         "-A",

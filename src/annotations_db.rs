@@ -17,6 +17,7 @@ pub struct AnnotationsDataBase {
         clairiere::InterpolateTree<u64, annotation::Annotation, DOMAIN_NUMBER>,
     >,
     transcripts2codings: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>>,
+    transcripts_id2annotation: ahash::AHashMap<Vec<u8>, annotation::Annotation>,
 }
 
 impl AnnotationsDataBase {
@@ -31,6 +32,8 @@ impl AnnotationsDataBase {
         > = ahash::AHashMap::new();
 
         let mut transcripts2codings: ahash::AHashMap<Vec<u8>, Vec<annotation::Annotation>> =
+            ahash::AHashMap::new();
+        let mut transcripts_id2annotation: ahash::AHashMap<Vec<u8>, annotation::Annotation> =
             ahash::AHashMap::new();
 
         let mut reader = csv::ReaderBuilder::new()
@@ -59,6 +62,12 @@ impl AnnotationsDataBase {
                         .push(annotation);
                 }
                 _ => {
+                    if annotation.get_feature() == b"transcript" {
+                        transcripts_id2annotation.insert(
+                            annotation.get_attribute().get_id().to_vec(),
+                            annotation.clone(),
+                        );
+                    }
                     intervals_builder
                         .entry(seqname.to_vec())
                         .and_modify(
@@ -92,6 +101,7 @@ impl AnnotationsDataBase {
         Ok(Self {
             transcripts_intervals,
             transcripts2codings,
+            transcripts_id2annotation,
         })
     }
 
@@ -116,6 +126,11 @@ impl AnnotationsDataBase {
         self.transcripts2codings.get(transcript_id)
     }
 
+    /// Get transcript annotation from id
+    pub fn get_transcript(&self, transcript_id: &[u8]) -> Option<&annotation::Annotation> {
+        self.transcripts_id2annotation.get(transcript_id)
+    }
+
     /// Add annotation
     fn add_annotion(
         tree: &mut Vec<clairiere::Node<u64, annotation::Annotation>>,
@@ -133,12 +148,23 @@ impl AnnotationsDataBase {
             tree.push(clairiere::Node::new(
                 upstream,
                 interval.start,
-                annotation::Annotation::from_annotation(&annotation, b"upstream"),
+                annotation::Annotation::create_child(
+                    &annotation,
+                    b"upstream",
+                    interval.end,
+                    interval.end + updown_distance,
+                ),
             ));
+
             tree.push(clairiere::Node::new(
                 interval.end,
                 interval.end + updown_distance,
-                annotation::Annotation::from_annotation(&annotation, b"downstream"),
+                annotation::Annotation::create_child(
+                    &annotation,
+                    b"downstream",
+                    interval.end,
+                    interval.end + updown_distance,
+                ),
             ));
         }
 
