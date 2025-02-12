@@ -357,14 +357,14 @@ fn logging_updown_setup() -> anyhow::Result<()> {
         }
         Ok(o) => {
             o.stdout(&b""[..]).stderr(
-                &b"INFO - Start read genome reference
-INFO - End read genome reference
-INFO - Start read annotations
-INFO - End read annotations
-INFO - Start read translation table
-INFO - End read translation table
-INFO - Start annotate variant
-INFO - End annotate variant
+                &b"INFO Start read genome reference
+INFO End read genome reference
+INFO Start read annotations
+INFO End read annotations
+INFO Start read translation table
+INFO End read translation table
+INFO Start annotate variant
+INFO End annotate variant
 "[..],
             );
         }
