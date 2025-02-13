@@ -3,7 +3,7 @@ features = "default"
 engine = "Llvm"
 
 [json]
-features = "out_json"
+features = "json"
 engine = "Llvm"
 
 [parallel]
@@ -11,7 +11,7 @@ features = "parallel"
 engine = "Llvm"
 
 [json_parallel]
-features = "out_json,parallel"
+features = "json,parallel"
 engine = "Llvm"
 
 [report]

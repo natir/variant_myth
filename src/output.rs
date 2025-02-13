@@ -5,9 +5,9 @@
 /* crate use */
 
 /* module declaration */
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 mod json;
-#[cfg(feature = "out_parquet")]
+#[cfg(feature = "parquet")]
 mod parquet;
 
 /* project use */
@@ -15,11 +15,11 @@ use crate::error;
 use crate::myth;
 
 /* reexport */
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 pub use json::JsonFormat;
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 pub use json::JsonWriter;
-#[cfg(feature = "out_parquet")]
+#[cfg(feature = "parquet")]
 pub use parquet::ParquetWriter;
 
 /// Common metadata to all output

@@ -66,14 +66,14 @@ tempfile       = { version = "3" }
 
 
 [features]
-default     = ["cli", "out_parquet"]
+default     = ["cli", "parquet"]
 
 cli         = ["dep:clap"]
 parallel    = ["dep:rayon", "clairiere/parallel"]
 
 # output feature
-out_parquet = ["dep:arrow", "dep:parquet"]
-out_json    = ["dep:serde", "dep:serde_json"]
+parquet = ["dep:arrow", "dep:parquet"]
+json    = ["dep:serde", "dep:serde_json"]
 
 bench       = []
 

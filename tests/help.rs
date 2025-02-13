@@ -13,10 +13,10 @@ Usage: variant_myth [OPTIONS] --input <VARIANT_PATHS> --reference <REFERENCE_PAT
 Commands:
 ";
 
-#[cfg(feature = "out_parquet")]
+#[cfg(feature = "parquet")]
 const SUBCOMMAND_PARQUET: &[u8] = b"  parquet  Output are write in parquet format
 ";
-#[cfg(feature = "out_json")]
+#[cfg(feature = "json")]
 const SUBCOMMAND_JSON: &[u8] = b"  json     Output are write in json format
 ";
 const SUBCOMMAND_HELP: &[u8] =
@@ -66,9 +66,9 @@ fn help_message() -> anyhow::Result<()> {
     let mut help = Vec::new();
     help.extend(USAGE);
 
-    #[cfg(feature = "out_parquet")]
+    #[cfg(feature = "parquet")]
     help.extend(SUBCOMMAND_PARQUET);
-    #[cfg(feature = "out_json")]
+    #[cfg(feature = "json")]
     help.extend(SUBCOMMAND_JSON);
 
     help.extend(SUBCOMMAND_HELP);
