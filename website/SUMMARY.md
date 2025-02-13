@@ -6,6 +6,7 @@
 
 - [Install](install.md)
 - [Usage](usage.md)
+- [How variant_myth work](how_variant_myth_work.md)
 
 # Contributor Guide
 
