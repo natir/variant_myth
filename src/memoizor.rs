@@ -175,21 +175,18 @@ mod tests {
     /* project use */
     use super::*;
     use crate::annotations_db;
-    use crate::test_data::GFF;
-    use crate::test_data::GFF_ANNOTATION;
-    use crate::test_data::SEQUENCE;
-    use crate::test_data::VARIANT_RECORD;
+    use crate::test_data;
 
     #[test]
     fn not_coding_annotation() -> error::Result<()> {
         let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
-            std::io::BufReader::new(Box::new(GFF));
+            std::io::BufReader::new(Box::new(test_data::GFF));
         let annotations_db = annotations_db::AnnotationsDataBase::from_reader(reader, 100)?;
         let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
-            std::io::BufReader::new(Box::new(SEQUENCE));
+            std::io::BufReader::new(Box::new(test_data::SEQUENCE));
         let sequences_db = sequences_db::SequencesDataBase::from_reader(reader)?;
 
-        let variant = &VARIANT_RECORD[0];
+        let variant = &test_data::VARIANT_RECORD[0];
         let not_coding_annotation =
             annotations_db.get_annotations(&variant.seqname, variant.get_interval());
 
@@ -203,10 +200,13 @@ mod tests {
         assert_eq!(memoizor.not_coding_annotation(), not_coding_annotation);
         assert_eq!(
             memoizor.coding_annotation().unwrap(),
-            &GFF_ANNOTATION[3..8].to_vec()
+            &test_data::GFF_ANNOTATION[3..8].to_vec()
         );
-        assert_eq!(memoizor.exons_annotation(), &GFF_ANNOTATION[3..8]);
-        assert_eq!(memoizor.transcript(), Some(&GFF_ANNOTATION[1]));
+        assert_eq!(
+            memoizor.exons_annotation(),
+            &test_data::GFF_ANNOTATION[3..8]
+        );
+        assert_eq!(memoizor.transcript(), Some(&test_data::GFF_ANNOTATION[1]));
 
         let exons_annotations = memoizor.exons_annotation().to_vec();
         let proxy = exons_annotations

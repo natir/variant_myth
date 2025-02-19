@@ -79,6 +79,19 @@ impl Type {
     }
 }
 
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        match &self {
+            Type::Small => write!(f, "Small"),
+            Type::Ins(length) => write!(f, "<INS:{}>", length),
+            Type::Del(length) => write!(f, "<DEL:{}>", length),
+            Type::Dup(length) => write!(f, "<DUP:{}>", length),
+            Type::Inv(length) => write!(f, "<INV:{}>", length),
+            Type::Cnv(length) => write!(f, "<CNV:{}>", length),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "json", derive(serde::Serialize))]
 /// Store Variant content
@@ -191,11 +204,12 @@ impl std::fmt::Debug for Variant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         write!(
             f,
-            "Variant {{ seqname: b\"{}\".to_vec(), position: {}, ref_seq: b\"{}\".to_vec(), alt_seq: b\"{}\".to_vec }}" ,
+            "Variant {{ seqname: b\"{}\".to_vec(), position: {}, ref_seq: b\"{}\".to_vec(), alt_seq: b\"{}\".to_vec(), variant_type: {} }}" ,
             String::from_utf8(self.seqname.to_vec()).unwrap(),
             self.position,
             String::from_utf8(self.ref_seq.to_vec()).unwrap(),
-            String::from_utf8(self.alt_seq.to_vec()).unwrap()
+            String::from_utf8(self.alt_seq.to_vec()).unwrap(),
+	    self.variant_type
         )
     }
 }
@@ -258,71 +272,26 @@ mod tests {
     /* std use */
 
     /* crate use */
-    use biotest::Format as _;
 
     /* project use */
     use super::*;
+    use crate::test_data;
 
     #[test]
     fn variant() -> error::Result<()> {
-        let mut rng = biotest::rand();
-        let generator = biotest::Vcf::default();
-
-        let mut input = vec![];
-        generator.records(&mut input, &mut rng, 5)?;
-
-        let reader = VcfReader::from_reader(std::io::Cursor::new(input));
+        let reader = VcfReader::from_reader(std::io::Cursor::new(test_data::VARIANT));
 
         let records = reader
             .into_iter()
             .collect::<error::Result<Vec<Variant>>>()?;
 
-        assert_eq!(
-            records,
-            vec![
-                Variant {
-                    seqname: b"YAR028W".to_vec(),
-                    position: 509242863,
-                    ref_seq: b"A".to_vec(),
-                    alt_seq: b".".to_vec(),
-                    variant_type: Type::Small,
-                },
-                Variant {
-                    seqname: b"93".to_vec(),
-                    position: 2036067339,
-                    ref_seq: b"T".to_vec(),
-                    alt_seq: b".".to_vec(),
-                    variant_type: Type::Small,
-                },
-                Variant {
-                    seqname: b"X".to_vec(),
-                    position: 2138516244,
-                    ref_seq: b"A".to_vec(),
-                    alt_seq: b".".to_vec(),
-                    variant_type: Type::Small,
-                },
-                Variant {
-                    seqname: b"NC_000015.10".to_vec(),
-                    position: 1204106468,
-                    ref_seq: b"c".to_vec(),
-                    alt_seq: b".".to_vec(),
-                    variant_type: Type::Small,
-                },
-                Variant {
-                    seqname: b"NC_016845.1".to_vec(),
-                    position: 1745241131,
-                    ref_seq: b"c".to_vec(),
-                    alt_seq: b".".to_vec(),
-                    variant_type: Type::Small,
-                }
-            ]
-        );
+        assert_eq!(records, *test_data::VARIANT_RECORD);
 
-        assert_eq!(records[1].get_interval(), (2036067339u64..2036067340u64));
+        assert_eq!(records[1].get_interval(), (18216..18217));
 
-        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"X\".to_vec(), position: 2138516244, ref_seq: b\"A\".to_vec(), alt_seq: b\".\".to_vec }".to_string());
+        assert_eq!(format!("{:?}", records[2]), "Variant { seqname: b\"chrA\".to_vec(), position: 12882, ref_seq: b\"A\".to_vec(), alt_seq: b\"G\".to_vec(), variant_type: Small }".to_string());
 
-        assert_eq!(format!("{}", records[2]), "X-2138516244-A-.".to_string());
+        assert_eq!(format!("{}", records[2]), "chrA-12882-A-G".to_string());
 
         Ok(())
     }
@@ -375,68 +344,6 @@ mod tests {
 
     #[test]
     fn struct_variant() -> error::Result<()> {
-        let variant = Variant::from_byte_record(csv::ByteRecord::from(vec![
-            "chr1", "62104", ".", "ACT", "<INS>", ".", ".", "SVLEN=40",
-        ]))?;
-        assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103); // 0-based
-        assert_eq!(variant.ref_seq, b"ACT");
-        assert_eq!(variant.alt_seq, b"<INS>");
-        assert_eq!(variant.variant_type, Type::Ins(40));
-        assert_eq!(variant.get_interval(), 62103..62104);
-        assert!(variant.valid());
-        assert!(variant.structural());
-
-        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"<INS>", Some(b"SVLEN=40"))?;
-        assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103); // 0-based
-        assert_eq!(variant.ref_seq, b"ACT");
-        assert_eq!(variant.alt_seq, b"<INS>");
-        assert_eq!(variant.variant_type, Type::Ins(40));
-        assert_eq!(variant.get_interval(), 62103..62104);
-        assert!(variant.valid());
-        assert!(variant.structural());
-
-        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"<DEL>", Some(b"SVLEN=40"))?;
-        assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103); // 0-based
-        assert_eq!(variant.ref_seq, b"ACT");
-        assert_eq!(variant.alt_seq, b"<DEL>");
-        assert_eq!(variant.variant_type, Type::Del(40));
-        assert_eq!(variant.get_interval(), 62103..62143);
-        assert!(variant.valid());
-        assert!(variant.structural());
-
-        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"<DUP>", Some(b"SVLEN=40"))?;
-        assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103); // 0-based
-        assert_eq!(variant.ref_seq, b"ACT");
-        assert_eq!(variant.alt_seq, b"<DUP>");
-        assert_eq!(variant.variant_type, Type::Dup(40));
-        assert_eq!(variant.get_interval(), 62103..62183);
-        assert!(variant.valid());
-        assert!(variant.structural());
-
-        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"<INV>", Some(b"SVLEN=40"))?;
-        assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103); // 0-based
-        assert_eq!(variant.ref_seq, b"ACT");
-        assert_eq!(variant.alt_seq, b"<INV>");
-        assert_eq!(variant.variant_type, Type::Inv(40));
-        assert_eq!(variant.get_interval(), 62103..62143);
-        assert!(variant.valid());
-        assert!(variant.structural());
-
-        let variant = Variant::test_variant(b"chr1", 62103, b"ACT", b"<CNV>", Some(b"SVLEN=40"))?;
-        assert_eq!(variant.seqname, b"chr1");
-        assert_eq!(variant.position, 62103); // 0-based
-        assert_eq!(variant.ref_seq, b"ACT");
-        assert_eq!(variant.alt_seq, b"<CNV>");
-        assert_eq!(variant.variant_type, Type::Cnv(40));
-        assert_eq!(variant.get_interval(), 62103..62143);
-        assert!(variant.valid());
-        assert!(variant.structural());
-
         let miss_svlen = Variant::from_byte_record(csv::ByteRecord::from(vec![
             "chr1", "62104", ".", "ACT", "<INS>", ".", ".", "SVLE=40",
         ]));

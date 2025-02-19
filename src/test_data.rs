@@ -8,7 +8,9 @@ use core::f64;
 use bstr::ByteSlice;
 
 /* project use */
-use crate::{annotation, variant};
+use crate::annotation;
+use crate::sequences_db;
+use crate::variant;
 
 /// GFF file
 pub const GFF: &[u8] = std::include_bytes!("test_data/annotations.gff3");
@@ -22,6 +24,7 @@ pub const VARIANT: &[u8] = std::include_bytes!("test_data/variants.vcf");
 /// GFF file split by line
 pub static GFF_BY_LINE: std::sync::LazyLock<Vec<Vec<u8>>> =
     std::sync::LazyLock::new(|| GFF.split_str("\n").map(|line| line.to_vec()).collect());
+
 /// GFF csv record
 pub static GFF_CSV_RECORD: std::sync::LazyLock<Vec<csv::ByteRecord>> =
     std::sync::LazyLock::new(|| {
@@ -33,6 +36,7 @@ pub static GFF_CSV_RECORD: std::sync::LazyLock<Vec<csv::ByteRecord>> =
 
         reader.byte_records().map(|r| r.unwrap()).collect()
     });
+
 /// GFF annotation
 pub static GFF_ANNOTATION: std::sync::LazyLock<Vec<annotation::Annotation>> =
     std::sync::LazyLock::new(|| {
@@ -63,7 +67,7 @@ pub static GFF_ANNOTATION: std::sync::LazyLock<Vec<annotation::Annotation>> =
                 frame: annotation::Frame::Unknow,
                 attribute: annotation::Attribute {
                     id: b"ENST00000797271.1".to_vec(),
-                    name: b"".to_vec(),
+                    name: b"transcript_name".to_vec(),
                     parent: b"ENSG00000286586.2".to_vec(),
                 },
             },
@@ -220,177 +224,186 @@ pub static GFF_ANNOTATION: std::sync::LazyLock<Vec<annotation::Annotation>> =
         ]
     });
 
+/// Sequence database
+pub static SEQUENCE_DB: std::sync::LazyLock<sequences_db::SequencesDataBase> =
+    std::sync::LazyLock::new(|| {
+        sequences_db::SequencesDataBase::from_reader(std::io::BufReader::new(
+            Box::new(SEQUENCE) as Box<dyn std::io::Read + Send>
+        ))
+        .unwrap()
+    });
+
 /// Variant record
 pub static VARIANT_RECORD: std::sync::LazyLock<Vec<variant::Variant>> =
     std::sync::LazyLock::new(|| {
         vec![
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 5772,
+                position: 5771,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"T".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 18217,
+                position: 18216,
                 ref_seq: b"C".to_vec(),
                 alt_seq: b"CT".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 12883,
+                position: 12882,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"G".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 9035,
+                position: 9034,
                 ref_seq: b"C".to_vec(),
                 alt_seq: b"G".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 6736,
+                position: 6735,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"G".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 121694676,
+                position: 121694675,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"C".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 121694675,
+                position: 121694674,
                 ref_seq: b"C".to_vec(),
                 alt_seq: b"G".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 121694690,
+                position: 121694689,
                 ref_seq: b"T".to_vec(),
                 alt_seq: b"TCTC".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 121694674,
+                position: 121694673,
                 ref_seq: b"C".to_vec(),
                 alt_seq: b"T".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 121695123,
+                position: 121695122,
                 ref_seq: b"G".to_vec(),
                 alt_seq: b"A".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 28567,
+                position: 28566,
                 ref_seq: b"T".to_vec(),
                 alt_seq: b"g".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 9685,
+                position: 9684,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"c".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 15351,
+                position: 15350,
                 ref_seq: b"G".to_vec(),
                 alt_seq: b"Gtgcg".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 19167,
+                position: 19166,
                 ref_seq: b"T".to_vec(),
                 alt_seq: b"Tgg".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 14832,
+                position: 14831,
                 ref_seq: b"ACTT".to_vec(),
                 alt_seq: b"A".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 29505,
+                position: 29504,
                 ref_seq: b"AA".to_vec(),
                 alt_seq: b"A".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 16413,
+                position: 16412,
                 ref_seq: b"TC".to_vec(),
                 alt_seq: b"T".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 22846,
+                position: 22845,
                 ref_seq: b"GCTCT".to_vec(),
                 alt_seq: b"G".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 13205,
+                position: 13204,
                 ref_seq: b"T".to_vec(),
                 alt_seq: b"Tggat".to_vec(),
                 variant_type: variant::Type::Small,
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 6650,
+                position: 6649,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"<CNV>".to_vec(),
                 variant_type: variant::Type::Cnv(589),
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 11777,
+                position: 11776,
                 ref_seq: b"C".to_vec(),
                 alt_seq: b"<INS>".to_vec(),
                 variant_type: variant::Type::Ins(613),
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 28302,
+                position: 28301,
                 ref_seq: b"C".to_vec(),
                 alt_seq: b"<DEL>".to_vec(),
                 variant_type: variant::Type::Del(974),
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 3334,
+                position: 3333,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"<DUP>".to_vec(),
                 variant_type: variant::Type::Dup(753),
             },
             variant::Variant {
                 seqname: b"chrA".to_vec(),
-                position: 3279,
+                position: 3278,
                 ref_seq: b"A".to_vec(),
                 alt_seq: b"<CNV>".to_vec(),
-                variant_type: variant::Type::Ins(907),
+                variant_type: variant::Type::Cnv(907),
             },
         ]
     });

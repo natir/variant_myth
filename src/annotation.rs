@@ -300,9 +300,11 @@ mod tests {
     /* std use */
 
     /* crate use */
+    use bstr::ByteSlice;
 
     /* project use */
     use super::*;
+    use crate::test_data;
 
     #[test]
     fn format_strand() {
@@ -320,16 +322,16 @@ mod tests {
 
     #[test]
     fn attribute() -> error::Result<()> {
-        let slice = b"ID=transcript:ENST00000374675;Parent=gene:ENSG00000112473;Name=SLC39A7-201";
+        let slice = &test_data::GFF_CSV_RECORD[1][8];
 
         let attribute = Attribute::from_u8_slice(slice)?;
-        assert_eq!(attribute.get_id(), b"transcript:ENST00000374675");
-        assert_eq!(attribute.get_parent(), b"gene:ENSG00000112473");
-        assert_eq!(attribute.get_name(), b"SLC39A7-201");
+        assert_eq!(attribute.get_id(), b"ENST00000797271.1");
+        assert_eq!(attribute.get_parent(), b"ENSG00000286586.2");
+        assert_eq!(attribute.get_name(), b"transcript_name");
 
         assert_eq!(
             format!("{}", attribute),
-            "ID=transcript:ENST00000374675;Name=SLC39A7-201;Parent=gene:ENSG00000112473"
+            "ID=ENST00000797271.1;Name=transcript_name;Parent=ENSG00000286586.2"
         );
 
         let slice = b"";
@@ -348,38 +350,28 @@ mod tests {
 
     #[test]
     fn annotation() -> error::Result<()> {
-        let mut data = vec![
-            "chr1",
-            "knownGene",
-            "transcript",
-            "29554",
-            "31097",
-            ".",
-            "+",
-            ".",
-            "Parent=ENST00000473358.1",
-        ];
+        let mut data: Vec<&[u8]> = test_data::GFF_BY_LINE[1].split_str("\t").collect();
 
         // Basic test
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
 
-        assert_eq!(annotation.get_interval(), 29553..31097);
-        assert_eq!(annotation.get_seqname(), b"chr1");
-        assert_eq!(annotation.get_source(), b"knownGene");
+        assert_eq!(annotation.get_interval(), 50..30235);
+        assert_eq!(annotation.get_seqname(), b"chrA");
+        assert_eq!(annotation.get_source(), b"HAVANA");
         assert_eq!(annotation.get_feature(), b"transcript");
         assert_eq!(annotation.get_strand(), &Strand::Forward);
         assert_eq!(annotation.get_frame(), &Frame::Unknow);
-        assert_eq!(annotation.get_parent(), b"ENST00000473358.1");
+        assert_eq!(annotation.get_parent(), b"ENSG00000286586.2");
         assert_eq!(
             annotation.get_attribute(),
-            &Attribute::from_u8_slice(record.get(8).unwrap())?
+            test_data::GFF_ANNOTATION[1].get_attribute()
         );
 
         // Format
         assert_eq!(
             format!("{}", annotation),
-            "chr1 knownGene transcript 29554 31097 inf + . Parent=ENST00000473358.1"
+"chrA HAVANA transcript 51 30235 inf + . ID=ENST00000797271.1;Name=transcript_name;Parent=ENSG00000286586.2"
         );
 
         // Change exon
@@ -388,41 +380,41 @@ mod tests {
         assert_eq!(annotation.get_feature(), b"exon");
 
         // All possible value for Strand
-        data[6] = "-";
+        data[6] = b"-";
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
         assert_eq!(annotation.get_strand(), &Strand::Reverse);
 
         // All possible value for Frame
-        data[7] = "0";
+        data[7] = b"0";
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
         assert_eq!(annotation.get_frame(), &Frame::Zero);
 
-        data[7] = "1";
+        data[7] = b"1";
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
         assert_eq!(annotation.get_frame(), &Frame::One);
 
-        data[7] = "2";
+        data[7] = b"2";
         let record = csv::ByteRecord::from(data.clone());
         let annotation = Annotation::from_byte_record(&record)?;
         assert_eq!(annotation.get_frame(), &Frame::Two);
 
         // Error
-        data[5] = "Not a Float";
+        data[5] = b"Not a Float";
         let record = csv::ByteRecord::from(data.clone());
         let _result = "Other not a Float".parse::<f64>();
         assert!(matches!(Annotation::from_byte_record(&record), _result));
-        data[5] = "1.1";
+        data[5] = b"1.1";
 
-        data[6] = "Forward";
+        data[6] = b"Forward";
         let record = csv::ByteRecord::from(data.clone());
         let _result: std::result::Result<(), error::Error> = Err(error::Error::GffBadStrand);
         assert!(matches!(Annotation::from_byte_record(&record), _result));
-        data[6] = "+";
+        data[6] = b"+";
 
-        data[7] = "3";
+        data[7] = b"3";
         let record = csv::ByteRecord::from(data.clone());
         let _result: std::result::Result<(), error::Error> = Err(error::Error::GffBadFrame);
         assert!(matches!(Annotation::from_byte_record(&record), _result));

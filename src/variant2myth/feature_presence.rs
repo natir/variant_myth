@@ -51,8 +51,7 @@ mod tests {
     use crate::error;
     use crate::memoizor;
     use crate::sequences_db;
-    use crate::test_data::GFF;
-    use crate::test_data::SEQUENCE;
+    use crate::test_data;
     use crate::variant;
     use crate::variant2myth::Annotator as _;
 
@@ -63,10 +62,10 @@ mod tests {
         let obj = FeaturePresence::new(b"five_prime_UTR", effect::Effect::FivePrimeUtrVariant);
 
         let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
-            std::io::BufReader::new(Box::new(GFF));
+            std::io::BufReader::new(Box::new(test_data::GFF));
         let annotations_db = annotations_db::AnnotationsDataBase::from_reader(reader, 100)?;
         let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
-            std::io::BufReader::new(Box::new(SEQUENCE));
+            std::io::BufReader::new(Box::new(test_data::SEQUENCE));
         let sequences_db = sequences_db::SequencesDataBase::from_reader(reader)?;
 
         let variant = variant::Variant::test_variant(b"chrA", 56, b"A", b"C", None)?;
@@ -93,10 +92,10 @@ mod tests {
         let obj = FeaturePresence::new(b"three_prime_UTR", effect::Effect::ThreePrimeUtrVariant);
 
         let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
-            std::io::BufReader::new(Box::new(GFF));
+            std::io::BufReader::new(Box::new(test_data::GFF));
         let annotations_db = annotations_db::AnnotationsDataBase::from_reader(reader, 100)?;
         let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
-            std::io::BufReader::new(Box::new(SEQUENCE));
+            std::io::BufReader::new(Box::new(test_data::SEQUENCE));
         let sequences_db = sequences_db::SequencesDataBase::from_reader(reader)?;
 
         let variant = variant::Variant::test_variant(b"chrA", 56, b"A", b"C", None)?;

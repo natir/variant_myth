@@ -126,10 +126,11 @@ pub(crate) mod tests {
     /* std use */
 
     /* crate use */
-    use biotest::Format as _;
 
     /* project use */
     use super::*;
+    use crate::annotation;
+    use crate::test_data;
 
     #[test]
     fn check_table() -> error::Result<()> {
@@ -168,14 +169,16 @@ pub(crate) mod tests {
     fn translate() -> error::Result<()> {
         let trans = Translate::from_reader(std::io::BufReader::new(Box::new(STANDARD)))?;
 
-        let mut rng = biotest::rand();
-        let generate = biotest::Sequence::default();
-        let mut seq = Vec::new();
-        generate.record(&mut seq, &mut rng)?;
+        let annotations = test_data::GFF_ANNOTATION[3..5]
+            .iter()
+            .collect::<Vec<&annotation::Annotation>>();
+
+        let seq =
+            test_data::SEQUENCE_DB.coding(&annotations, annotation::Strand::Forward, None, None)?;
 
         assert_eq!(
             trans.translate(&seq),
-            b"YMNRVLVKPR*CLYAGYRIIDGCSCLLVLCKRGDMLQLPLTGIHPLELAT"
+            b"S*LKKELNAEESKMETWRETPSSSDIKPLNPTMAELALLKPS*VEFLPLANERGLMNTHIVQFQYTKFFRRRSLSY*SHFTCLGRQLGVPRADTLQVTHR*RLTHAGV*EPCFKTTQTL"
         );
 
         Ok(())

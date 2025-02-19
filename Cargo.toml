@@ -60,7 +60,6 @@ stderrlog      = { version = "0.6" }
 criterion      = { version = "0.5" }
 
 ## Functional test
-biotest        = { version = "0.2", features = ["sequence", "vcf", "fasta"] }
 assert_cmd     = { version = "2" }
 tempfile       = { version = "3" }
 

@@ -184,26 +184,25 @@ mod tests {
 
     /* project use */
     use super::*;
-    use crate::test_data::GFF;
-    use crate::test_data::GFF_ANNOTATION;
+    use crate::test_data;
 
     #[test]
     fn annotations() -> error::Result<()> {
-        let mut truth = vec![&GFF_ANNOTATION[0], &GFF_ANNOTATION[1]];
+        let mut truth = vec![&test_data::GFF_ANNOTATION[0], &test_data::GFF_ANNOTATION[1]];
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
-        let reader: Box<dyn std::io::Read + Send> = Box::new(GFF);
+        let reader: Box<dyn std::io::Read + Send> = Box::new(test_data::GFF);
         let annotations = AnnotationsDataBase::from_reader(std::io::BufReader::new(reader), 100)?;
 
         let mut result = annotations.get_annotations(b"chrA", 13250..13251);
         result.sort_by_key(|a| (a.get_start(), a.get_stop()));
         assert_eq!(result, truth);
 
-        let mut truth = GFF_ANNOTATION[3..8].to_vec();
+        let mut truth = test_data::GFF_ANNOTATION[3..8].to_vec();
         truth.sort_by_key(|a| (a.get_start(), a.get_stop()));
 
         let result = annotations
-            .get_coding_annotation(GFF_ANNOTATION[1].get_attribute().get_id())
+            .get_coding_annotation(test_data::GFF_ANNOTATION[1].get_attribute().get_id())
             .unwrap();
         let mut value = result.clone();
         value.sort_by_key(|a| (a.get_start(), a.get_stop()));
