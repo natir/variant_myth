@@ -191,6 +191,8 @@ mod tests {
 
     /* project use */
     use super::*;
+    use crate::error;
+    use crate::test_data;
 
     #[test]
     fn annotator_choices() {
@@ -235,5 +237,38 @@ mod tests {
         assert!(!flag.contains(AnnotatorsChoicesRaw::Feature));
         assert!(!flag.contains(AnnotatorsChoicesRaw::Gene));
         assert!(flag.contains(AnnotatorsChoicesRaw::Hgvs));
+    }
+
+    #[test]
+    pub fn unvalid_variant() -> error::Result<()> {
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(test_data::GFF));
+        let annotations_db = annotations_db::AnnotationsDataBase::from_reader(reader, 100)?;
+
+        let translate = translate::Translate::default();
+
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(test_data::SEQUENCE));
+        let sequences_db = sequences_db::SequencesDataBase::from_reader(reader)?;
+
+        let variant2myth = Variant2Myth::new(
+            &annotations_db,
+            &translate,
+            &sequences_db,
+            AnnotatorsChoices::empty(),
+        );
+
+        let variant = variant::Variant::test_variant(b"chrA", 73_602, b"A", b"", None)?;
+        let mut truth = myth::Myth::from_variant(variant.clone());
+        truth.add_annotation(
+            myth::AnnotationMyth::from_nowhere()
+                .effects(vec![effect::Effect::Ignore])
+                .build()
+                .unwrap(),
+        );
+
+        assert_eq!(variant2myth.myth(variant), truth);
+
+        Ok(())
     }
 }
