@@ -278,6 +278,18 @@ mod tests {
     use crate::test_data;
 
     #[test]
+    fn type_display() -> error::Result<()> {
+        assert_eq!(format!("{}", Type::Small), "Small");
+        assert_eq!(format!("{}", Type::Ins(10)), "<INS:10>");
+        assert_eq!(format!("{}", Type::Del(10)), "<DEL:10>");
+        assert_eq!(format!("{}", Type::Dup(10)), "<DUP:10>");
+        assert_eq!(format!("{}", Type::Inv(10)), "<INV:10>");
+        assert_eq!(format!("{}", Type::Cnv(10)), "<CNV:10>");
+
+        Ok(())
+    }
+
+    #[test]
     fn variant() -> error::Result<()> {
         let reader = VcfReader::from_reader(std::io::Cursor::new(test_data::VARIANT));
 
