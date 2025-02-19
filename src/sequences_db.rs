@@ -276,62 +276,37 @@ impl SequencesDataBase {
 #[cfg(test)]
 mod tests {
     /* std use */
-    use std::io::{Seek, Write as _};
 
     /* crate use */
-    use biotest::Format as _;
 
     /* project use */
     use super::*;
+    use crate::test_data;
 
     #[test]
     fn _rev_comp() -> error::Result<()> {
-        let mut rng = biotest::rand();
-        let generator = biotest::Sequence::default();
+        let mut seq = test_data::SEQUENCE_DB
+            .get_interval(b"chrA", &(231..291))?
+            .to_vec();
 
-        let mut seq = Vec::new();
-        generator.record(&mut seq, &mut rng)?;
-
+        assert_eq!(
+            seq,
+            b"ACCCACATAGTTCAATTTCAATATACGAAGgtaggcactgagatttcaatatcagaagaa".to_vec()
+        );
         rev_comp(&mut seq);
-        assert_eq!(seq, b"tgTCGcAagTTcCAgagGAtGAataCCtgTTAaCGgtAaTTGCaGcaTgtCTCcccttttgcAcaGTACCAGcagaCatGaGCaaccAtCtAtAaTTcgAtaTcCTgcGtacaAgCatTaccgTggctTAACTAACacGCGaTTcATAta".to_vec());
+        assert_eq!(
+            seq,
+            b"ttcttctgatattgaaatctcagtgcctacCTTCGTATATTGAAATTGAACTATGTGGGT".to_vec()
+        );
 
         Ok(())
     }
 
-    fn seqdb_setup() -> error::Result<SequencesDataBase> {
-        let mut seq_file = std::io::Cursor::new(Vec::new());
-
-        seq_file.write_all(b">sequence\n")?;
-        seq_file.write_all(b"ttcgtctag")?;
-        seq_file.write_all(b"ATGACCGCCATGCAAAGGCTCACTGGG")?;
-        seq_file.write_all(b"ctctcttcaccc")?;
-        seq_file.write_all(b"CTTAAGCATCTACGTATGCGG")?;
-        seq_file.write_all(b"gatcgcaggcctctctcggtg")?;
-        seq_file.write_all(b"TGTCGTCGGTCGAGGGTTTAACAT")?;
-        seq_file.write_all(b"atcctgcttggccaa")?;
-
-        seq_file.seek(std::io::SeekFrom::Start(0))?;
-
-        SequencesDataBase::from_reader(std::io::BufReader::new(
-            Box::new(seq_file) as Box<dyn std::io::Read + Send>
-        ))
-    }
-
-    fn annotation_setup() -> Vec<annotation::Annotation> {
-        vec![
-            annotation::Annotation::test_annotation(b"sequence".to_vec(), 10, 36),
-            annotation::Annotation::test_annotation(b"sequence".to_vec(), 49, 69),
-            annotation::Annotation::test_annotation(b"sequence".to_vec(), 91, 114),
-        ]
-    }
-
     #[test]
     fn get_interval() -> error::Result<()> {
-        let seqdb = seqdb_setup()?;
-
         assert_eq!(
-            b"TGACCGCCATGCAAAGGCTCACTGGGctctcttcacccCT",
-            seqdb.get_interval(b"sequence", &(10..50))?
+            b"TTCAATTTCAATATACGAAGgtaggcactgagatttcaat",
+            test_data::SEQUENCE_DB.get_interval(b"chrA", &(241..281))?
         );
 
         Ok(())
@@ -339,24 +314,23 @@ mod tests {
 
     #[test]
     fn epissed() -> error::Result<()> {
-        let seqdb = seqdb_setup()?;
-
-        let proxy = annotation_setup();
-        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
+        let annotations = test_data::GFF_ANNOTATION[3..5]
+            .iter()
+            .collect::<Vec<&annotation::Annotation>>();
 
         assert_eq!(
             b"".to_vec(),
-            seqdb.epissed(&[], annotation::Strand::Forward)?
+            test_data::SEQUENCE_DB.epissed(&[], annotation::Strand::Forward)?
         );
 
         assert_eq!(
-            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.epissed(&annotations, annotation::Strand::Forward)?
+            b"AGCTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGTGTAGGAGCCTTGCTTCAAGACCACACAGACTTTGAG".to_vec(),
+            test_data::SEQUENCE_DB.epissed(&annotations, annotation::Strand::Forward)?
         );
 
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
-            seqdb.epissed(&annotations, annotation::Strand::Reverse)?
+            b"CTCAAAGTCTGTGTGGTCTTGAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCCTCTTTCATTTGCAAGAGGCAGAAATTCAACTCAGGAGGGCTTCAGTAATGCAAGTTCAGCCATGGTGGGATTCAGGGGCTTAATGTCACTGGAACTTGGCGTCTCCCTCCATGTCTCCATTTTGCTTTCCTCTGCGTTGAGTTCCTTCTTAAGTCAGCT".to_vec(),
+            test_data::SEQUENCE_DB.epissed(&annotations, annotation::Strand::Reverse)?
         );
 
         Ok(())
@@ -364,21 +338,20 @@ mod tests {
 
     #[test]
     fn epissed_edit() -> error::Result<()> {
-        let seqdb = seqdb_setup()?;
+        let annotations = test_data::GFF_ANNOTATION[3..5]
+            .iter()
+            .collect::<Vec<&annotation::Annotation>>();
 
-        let proxy = annotation_setup();
-        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
-
-        let variant = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg", None)?;
+        let variant = variant::Variant::test_variant(b"chrA", 61, b"G", b"ggg", None)?;
 
         assert_eq!(
-            b"ATGACCgggCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.epissed_edit(&annotations, annotation::Strand::Forward, &variant)?
+            b"AgggCTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGTGTAGGAGCCTTGCTTCAAGACCACACAGACTTTGAG".to_vec(),
+            test_data::SEQUENCE_DB.epissed_edit(&annotations, annotation::Strand::Forward, &variant)?
         );
 
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGcccGGTCAT".to_vec(),
-            seqdb.epissed_edit(&annotations, annotation::Strand::Reverse, &variant)?
+            b"CTCAAAGTCTGTGTGGTCTTGAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCCTCTTTCATTTGCAAGAGGCAGAAATTCAACTCAGGAGGGCTTCAGTAATGCAAGTTCAGCCATGGTGGGATTCAGGGGCTTAATGTCACTGGAACTTGGCGTCTCCCTCCATGTCTCCATTTTGCTTTCCTCTGCGTTGAGTTCCTTCTTAAGTCAGcccT".to_vec(),
+            test_data::SEQUENCE_DB.epissed_edit(&annotations, annotation::Strand::Reverse, &variant)?
         );
 
         Ok(())
@@ -386,25 +359,24 @@ mod tests {
 
     #[test]
     fn coding() -> error::Result<()> {
-        let seqdb = seqdb_setup()?;
+        let annotations = test_data::GFF_ANNOTATION[3..5]
+            .iter()
+            .collect::<Vec<&annotation::Annotation>>();
 
-        let proxy = annotation_setup();
-        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
+        let start_forward = Some(63);
+        let stop_forward = Some(13324);
 
-        let start_forward = Some(19);
-        let stop_forward = Some(112);
-
-        let start_reverse = Some(115);
-        let stop_reverse = Some(50);
+        let start_reverse = Some(13340);
+        let stop_reverse = Some(220);
 
         assert_eq!(
-            b"ATGACCGCCATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.coding(&annotations, annotation::Strand::Forward, None, None,)?
+            b"AGCTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGTGTAGGAGCCTTGCTTCAAGACCACACAGACTTTGAG".to_vec(),
+            test_data::SEQUENCE_DB.coding(&annotations, annotation::Strand::Forward, None, None,)?
         );
 
         assert_eq!(
-            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAACAT".to_vec(),
-            seqdb.coding(
+            b"CTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGTGTAGGAGCCTTGCTTCAAGACCACACAGACTTTGAG".to_vec(),
+            test_data::SEQUENCE_DB.coding(
                 &annotations,
                 annotation::Strand::Forward,
                 start_forward,
@@ -413,8 +385,8 @@ mod tests {
         );
 
         assert_eq!(
-            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
-            seqdb.coding(
+            b"CTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGT".to_vec(),
+            test_data::SEQUENCE_DB.coding(
                 &annotations,
                 annotation::Strand::Forward,
                 start_forward,
@@ -423,13 +395,13 @@ mod tests {
         );
 
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
-            seqdb.coding(&annotations, annotation::Strand::Reverse, None, None,)?
+            b"CTCAAAGTCTGTGTGGTCTTGAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCCTCTTTCATTTGCAAGAGGCAGAAATTCAACTCAGGAGGGCTTCAGTAATGCAAGTTCAGCCATGGTGGGATTCAGGGGCTTAATGTCACTGGAACTTGGCGTCTCCCTCCATGTCTCCATTTTGCTTTCCTCTGCGTTGAGTTCCTTCTTAAGTCAGCT".to_vec(),
+            test_data::SEQUENCE_DB.coding(&annotations, annotation::Strand::Reverse, None, None,)?
         );
 
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAAGCCCAGTGAGCCTTTGCATGGCGGTCAT".to_vec(),
-            seqdb.coding(
+            b"GAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCCTCTTTCATTTGCAAGAGGCAGAAATTCAACTCAGGAGGGCTTCAGTAATGCAAGTTCAGCCATGGTGGGATTCAGGGGCTTAATGTCACTGGAACTTGGCGTCTCCCTCCATGTCTCCATTTTGCTTTCCTCTGCGTTGAGTTCCTTCTTAAGTCAGCT".to_vec(),
+            test_data::SEQUENCE_DB.coding(
                 &annotations,
                 annotation::Strand::Reverse,
                 start_reverse,
@@ -438,8 +410,8 @@ mod tests {
         );
 
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
-            seqdb.coding(
+            b"GAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCC".to_vec(),
+            test_data::SEQUENCE_DB.coding(
                 &annotations,
                 annotation::Strand::Reverse,
                 start_reverse,
@@ -452,21 +424,20 @@ mod tests {
 
     #[test]
     fn coding_edit() -> error::Result<()> {
-        let seqdb = seqdb_setup()?;
+        let annotations = test_data::GFF_ANNOTATION[3..5]
+            .iter()
+            .collect::<Vec<&annotation::Annotation>>();
 
-        let proxy = annotation_setup();
-        let annotations = proxy.iter().collect::<Vec<&annotation::Annotation>>();
+        let start_forward = Some(63);
+        let stop_forward = Some(13324);
 
-        let start_forward = Some(19);
-        let stop_forward = Some(112);
+        let start_reverse = Some(13340);
+        let stop_reverse = Some(220);
 
-        let start_reverse = Some(115);
-        let stop_reverse = Some(50);
-
-        let forward_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg", None)?;
+        let forward_before = variant::Variant::test_variant(b"sequence", 62, b"G", b"ggg", None)?;
         assert_eq!(
-            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
-            seqdb.coding_edit(
+            b"CTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGT".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
                 &annotations,
                 annotation::Strand::Forward,
                 &forward_before,
@@ -475,10 +446,10 @@ mod tests {
             )?
         );
 
-        let forward_in = variant::Variant::test_variant(b"sequence", 23, b"A", b"t", None)?;
+        let forward_in = variant::Variant::test_variant(b"sequence", 71, b"G", b"ggg", None)?;
         assert_eq!(
-            b"ATGCAtAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
-            seqdb.coding_edit(
+            b"CTGACTTAAgggAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGT".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
                 &annotations,
                 annotation::Strand::Forward,
                 &forward_in,
@@ -487,10 +458,10 @@ mod tests {
             )?
         );
 
-        let forward_after = variant::Variant::test_variant(b"sequence", 113, b"A", b"g", None)?;
+        let forward_after = variant::Variant::test_variant(b"sequence", 13341, b"A", b"g", None)?;
         assert_eq!(
-            b"ATGCAAAGGCTCACTGGGCTTAAGCATCTACGTATGCGGTGTCGTCGGTCGAGGGTTTAA".to_vec(),
-            seqdb.coding_edit(
+            b"CTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAGTTCTTCAGACGACGGTCCCTGAGTTACTGAAGCCACTTCACCTGTTTGGGCAGACAGCTGGGAGTGCCCAGAGCTGACACCCTCCAGGTGACCCACAGGTAACGGCTGACCCACGCTGGAGT".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
                 &annotations,
                 annotation::Strand::Forward,
                 &forward_after,
@@ -499,10 +470,10 @@ mod tests {
             )?
         );
 
-        let reverse_before = variant::Variant::test_variant(b"sequence", 114, b"A", b"g", None)?;
+        let reverse_before = variant::Variant::test_variant(b"sequence", 13350, b"A", b"g", None)?;
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
-            seqdb.coding_edit(
+            b"GAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCC".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
                 &annotations,
                 annotation::Strand::Reverse,
                 &reverse_before,
@@ -511,10 +482,10 @@ mod tests {
             )?
         );
 
-        let reverse_in = variant::Variant::test_variant(b"sequence", 61, b"A", b"g", None)?;
+        let reverse_in = variant::Variant::test_variant(b"sequence", 13292, b"C", b"aaa", None)?;
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATAcGTAGATGCTTAA".to_vec(),
-            seqdb.coding_edit(
+            b"GAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGtttCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCC".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
                 &annotations,
                 annotation::Strand::Reverse,
                 &reverse_in,
@@ -523,10 +494,10 @@ mod tests {
             )?
         );
 
-        let reverse_before = variant::Variant::test_variant(b"sequence", 15, b"G", b"ggg", None)?;
+        let reverse_before = variant::Variant::test_variant(b"sequence", 70, b"G", b"ggg", None)?;
         assert_eq!(
-            b"ATGTTAAACCCTCGACCGACGACACCGCATACGTAGATGCTTAA".to_vec(),
-            seqdb.coding_edit(
+            b"GAAGCAAGGCTCCTACACTCCAGCGTGGGTCAGCCGTTACCTGTGGGTCACCTGGAGGGTGTCAGCTCTGGGCACTCCCAGCTGTCTGCCCAAACAGGTGAAGTGGCTTCAGTAACTCAGGGACCGTCGTCTGAAGAACTTCGTATATTGAAATTGAACTATGTGGGTATTCATCAGGCC".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
                 &annotations,
                 annotation::Strand::Reverse,
                 &reverse_before,
@@ -540,26 +511,18 @@ mod tests {
 
     #[test]
     fn single_exon() -> error::Result<()> {
-        let seqdb = seqdb_setup()?;
-
-        let annotations = annotation_setup();
+        let annotations = &test_data::GFF_ANNOTATION[3];
 
         assert_eq!(
-            b"ATGACCGCCATGCAAAGGCTCACTGGG".to_vec(),
-            seqdb.coding(
-                &[&annotations[0]],
-                annotation::Strand::Forward,
-                //&forward_in,
-                None,
-                None,
-            )?
+            b"AGCTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAG".to_vec(),
+            test_data::SEQUENCE_DB.coding(&[annotations], annotation::Strand::Forward, None, None,)?
         );
 
-        let variant = variant::Variant::test_variant(b"sequence", 23, b"A", b"t", None)?;
+        let variant = variant::Variant::test_variant(b"chrA", 61, b"G", b"ggg", None)?;
         assert_eq!(
-            b"ATGACCGCCATGCAtAGGCTCACTGGG".to_vec(),
-            seqdb.coding_edit(
-                &[&annotations[0]],
+            b"AgggCTGACTTAAGAAGGAACTCAACGCAGAGGAAAGCAAAATGGAGACATGGAGGGAGACGCCAAGTTCCAGTGACATTAAGCCCCTGAATCCCACCATGGCTGAACTTGCATTACTGAAGCCCTCCTGAGTTGAATTTCTGCCTCTTGCAAATGAAAGAGGCCTGATGAATACCCACATAGTTCAATTTCAATATACGAAG".to_vec(),
+            test_data::SEQUENCE_DB.coding_edit(
+                &[annotations],
                 annotation::Strand::Forward,
                 &variant,
                 None,

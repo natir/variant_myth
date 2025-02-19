@@ -130,6 +130,7 @@ mod tests {
     /* project use */
     use super::*;
     use crate::error;
+    use crate::test_data;
 
     #[test]
     fn annotation_myth() {
@@ -192,29 +193,18 @@ mod tests {
 
     #[test]
     fn annotation_myth_from_annotation() -> error::Result<()> {
-        let gff_annotation =
-            annotation::Annotation::from_byte_record(&csv::ByteRecord::from(vec![
-                "chr1",
-                "knownGene",
-                "transcript",
-                "29554",
-                "31097",
-                ".",
-                "+",
-                ".",
-                "Parent=ENST00000473358.1;ID=11;Name=ENST00001",
-            ]))?;
+        let gff_annotation = &test_data::GFF_ANNOTATION[1];
 
-        let mut annotation = AnnotationMyth::from_annotation(&gff_annotation);
+        let mut annotation = AnnotationMyth::from_annotation(gff_annotation);
         annotation.add_effect(effect::Effect::ExonRegion);
 
         assert_eq!(
             annotation.build()?,
             AnnotationMyth {
-                source: b"knownGene".to_vec(),
+                source: b"HAVANA".to_vec(),
                 feature: b"transcript".to_vec(),
-                name: b"ENST00001".to_vec(),
-                id: b"11".to_vec(),
+                name: b"transcript_name".to_vec(),
+                id: b"ENST00000797271.1".to_vec(),
                 effects: vec![effect::Effect::ExonRegion],
                 impact: effect::Impact::Modifier,
             }

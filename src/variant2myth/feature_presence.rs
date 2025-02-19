@@ -5,8 +5,8 @@
 /* crate use */
 
 /* project use */
-use crate::annotation;
 use crate::effect;
+use crate::memoizor;
 use crate::variant;
 use crate::variant2myth;
 
@@ -24,10 +24,14 @@ impl FeaturePresence {
 impl variant2myth::Annotator for FeaturePresence {
     fn annotate(
         &self,
-        annotations: &[&annotation::Annotation],
         _variant: &variant::Variant,
+        memoizor: &mut memoizor::Memoizor,
     ) -> Vec<effect::Effect> {
-        if annotations.iter().any(|a| a.get_feature() == self.name) {
+        if memoizor
+            .not_coding_annotation()
+            .iter()
+            .any(|a| a.get_feature() == self.name)
+        {
             vec![self.effect.clone()]
         } else {
             vec![]
@@ -40,13 +44,14 @@ mod tests {
     /* std use */
 
     /* crate use */
-    use bstr::ByteSlice as _;
 
     /* project use */
-    use crate::annotation;
+    use crate::annotations_db;
     use crate::effect;
     use crate::error;
-    use crate::tests::GFF;
+    use crate::memoizor;
+    use crate::sequences_db;
+    use crate::test_data;
     use crate::variant;
     use crate::variant2myth::Annotator as _;
 
@@ -54,22 +59,28 @@ mod tests {
 
     #[test]
     fn feature_presence() -> error::Result<()> {
-        let file = GFF.replace(b"{0}", b"chr1");
-
         let obj = FeaturePresence::new(b"five_prime_UTR", effect::Effect::FivePrimeUtrVariant);
-        let annotation = annotation::Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[292..374].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
+
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(test_data::GFF));
+        let annotations_db = annotations_db::AnnotationsDataBase::from_reader(reader, 100)?;
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(test_data::SEQUENCE));
+        let sequences_db = sequences_db::SequencesDataBase::from_reader(reader)?;
+
+        let variant = variant::Variant::test_variant(b"chrA", 56, b"A", b"C", None)?;
+        let not_coding_annotation =
+            annotations_db.get_annotations(&variant.seqname, variant.get_interval());
+
+        let mut memoizor = memoizor::Memoizor::new(
+            b"ENST00000797271.1",
+            &annotations_db,
+            &sequences_db,
+            &not_coding_annotation,
+        );
 
         assert_eq!(
-            obj.annotate(
-                &[&annotation],
-                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C", None)?
-            ),
+            obj.annotate(&variant, &mut memoizor),
             vec![effect::Effect::FivePrimeUtrVariant]
         );
 
@@ -78,24 +89,27 @@ mod tests {
 
     #[test]
     fn feature_absence() -> error::Result<()> {
-        let file = GFF.replace(b"{0}", b"chr1");
-
         let obj = FeaturePresence::new(b"three_prime_UTR", effect::Effect::ThreePrimeUtrVariant);
-        let annotation = annotation::Annotation::from_byte_record(&csv::ByteRecord::from(
-            String::from_utf8(file[292..374].to_vec())
-                .unwrap()
-                .split('\t')
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
-        ))?;
 
-        assert_eq!(
-            obj.annotate(
-                &[&annotation],
-                &variant::Variant::test_variant(b"chr1", 900, b"A", b"C", None)?
-            ),
-            vec![]
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(test_data::GFF));
+        let annotations_db = annotations_db::AnnotationsDataBase::from_reader(reader, 100)?;
+        let reader: std::io::BufReader<Box<dyn std::io::Read + std::marker::Send>> =
+            std::io::BufReader::new(Box::new(test_data::SEQUENCE));
+        let sequences_db = sequences_db::SequencesDataBase::from_reader(reader)?;
+
+        let variant = variant::Variant::test_variant(b"chrA", 56, b"A", b"C", None)?;
+        let not_coding_annotation =
+            annotations_db.get_annotations(&variant.seqname, variant.get_interval());
+
+        let mut memoizor = memoizor::Memoizor::new(
+            b"ENST00000797271.1",
+            &annotations_db,
+            &sequences_db,
+            &not_coding_annotation,
         );
+
+        assert_eq!(obj.annotate(&variant, &mut memoizor), vec![]);
 
         Ok(())
     }

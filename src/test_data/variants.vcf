@@ -1,0 +1,28 @@
+##fileformat=VCFv4.3
+##contig=<ID=chrA,length=31540>
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chrA	5772	.	A	T	99	PASS	.
+chrA	18217	.	C	CT	99	PASS	.
+chrA	12883	.	A	G	99	PASS	.
+chrA	9035	.	C	G	99	PASS	.
+chrA	6736	.	A	G	99	PASS	.
+chrA	121694676	.	A	C	99	PASS	.
+chrA	121694675	.	C	G	99	PASS	.
+chrA	121694690	.	T	TCTC	99	PASS	.
+chrA	121694674	.	C	T	99	PASS	.
+chrA	121695123	.	G	A	99	PASS	.
+chrA	28567	.	T	g	99	PASS	.
+chrA	9685	.	A	c	99	PASS	.
+chrA	15351	.	G	Gtgcg	99	PASS	.
+chrA	19167	.	T	Tgg	99	PASS	.
+chrA	14832	.	ACTT	A	99	PASS	.
+chrA	29505	.	AA	A	99	PASS	.
+chrA	16413	.	TC	T	99	PASS	.
+chrA	22846	.	GCTCT	G	99	PASS	.
+chrA	13205	.	T	Tggat	99	PASS	.
+chrA	6650	.	A	<CNV>	99	PASS	SVLEN=589
+chrA	11777	.	C	<INS>	99	PASS	SVLEN=613
+chrA	28302	.	C	<DEL>	99	PASS	SVLEN=974
+chrA	3334	.	A	<DUP>	99	PASS	SVLEN=753
+chrA	3279	.	A	<CNV>	99	PASS	SVLEN=907

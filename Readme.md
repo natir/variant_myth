@@ -23,4 +23,4 @@ To detect if a variant match an interval we use IntervalSet, information associa
 
 ## Minimum supported Rust version
 
-Currently the minimum supported Rust version is 1.74.
+Currently the minimum supported Rust version is 1.80.
