@@ -20,7 +20,22 @@ license-file = "LICENSE"
 [[bin]]
 name = "variant_myth"
 path = "src/main.rs"
-required-features = ["cli"]
+required-features = ["default"]
+
+
+[features]
+default     = ["cli", "parquet"]
+
+cli         = ["dep:clap"]
+parallel    = ["dep:rayon", "clairiere/parallel"]
+
+# output feature
+parquet = ["dep:arrow", "dep:parquet"]
+json    = ["dep:serde", "dep:serde_json"]
+
+# dev feature
+bench       = []
+
 
 [dependencies]
 # Specific
@@ -57,25 +72,20 @@ stderrlog      = { version = "0.6" }
 
 [dev-dependencies]
 ## Benchmark management
-criterion      = { version = "0.5" }
+criterion      = { version = "0.5", features = ["html_reports"] }
 
 ## Functional test
 assert_cmd     = { version = "2" }
 tempfile       = { version = "3" }
 
 
-[features]
-default     = ["cli", "parquet"]
+[[bench]]
+name = "gene"
+harness = false
 
-cli         = ["dep:clap"]
-parallel    = ["dep:rayon", "clairiere/parallel"]
-
-# output feature
-parquet = ["dep:arrow", "dep:parquet"]
-json    = ["dep:serde", "dep:serde_json"]
-
-# dev feature
-bench       = []
+[[bench]]
+name = "feature"
+harness = false
 
 
 [profile.release]
