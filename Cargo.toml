@@ -2,7 +2,8 @@
 name    = "variant_myth"
 version = "0.1.0"
 authors = [
-	"Pierre Marijon <pierre@marijon.fr>"
+	"Pierre Marijon <pierre@marijon.fr>",
+	"Charles Monod-Broca <charles.monod-broca@neuf.fr>",
 ]
 
 description  = "A KISS variant annotater."
