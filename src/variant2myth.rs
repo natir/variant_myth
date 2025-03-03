@@ -33,6 +33,12 @@ pub enum AnnotatorsChoicesRaw {
     Hgvs = 1 << 4,
 }
 
+impl From<AnnotatorsChoicesRaw> for usize {
+    fn from(value: AnnotatorsChoicesRaw) -> usize {
+        (value as u8).ilog2() as usize
+    }
+}
+
 /// Choose how variant are annotate
 pub type AnnotatorsChoices = enumflags2::BitFlags<AnnotatorsChoicesRaw>;
 
@@ -63,8 +69,8 @@ impl<'a> Variant2Myth<'a> {
         let mut annotators: [Vec<Box<dyn Annotator + std::marker::Send + std::marker::Sync>>; 5] =
             [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
-        annotators[(AnnotatorsChoicesRaw::Gene as u8).ilog2() as usize].extend([]);
-        annotators[(AnnotatorsChoicesRaw::Feature as u8).ilog2() as usize].extend([
+        annotators[usize::from(AnnotatorsChoicesRaw::Gene)].extend([]);
+        annotators[usize::from(AnnotatorsChoicesRaw::Feature)].extend([
             Box::new(feature_presence::FeaturePresence::new(
                 b"upstream",
                 effect::Effect::UpstreamGeneVariant,
@@ -82,10 +88,10 @@ impl<'a> Variant2Myth<'a> {
                 effect::Effect::ThreePrimeUtrVariant,
             )) as Box<dyn Annotator + Send + Sync>,
         ]);
-        annotators[(AnnotatorsChoicesRaw::Effect as u8).ilog2() as usize].push(Box::new(
+        annotators[usize::from(AnnotatorsChoicesRaw::Effect)].push(Box::new(
             sequence_analysis::SequenceAnalysis::new(translate, sequences),
         ));
-        annotators[(AnnotatorsChoicesRaw::Hgvs as u8).ilog2() as usize].extend([]);
+        annotators[usize::from(AnnotatorsChoicesRaw::Hgvs)].extend([]);
 
         Self {
             annotations,
