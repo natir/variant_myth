@@ -50,6 +50,21 @@ trait Annotator {
     ) -> Vec<effect::Effect>;
 }
 
+macro_rules! myth_fast_end {
+    ($test:expr, $effect:expr, $myth:ident) => {
+        if $test {
+            $myth.add_annotation(
+                myth::AnnotationMyth::from_nowhere()
+                    .effects(vec![$effect])
+                    .build()
+                    .unwrap(), // No possible error in build
+            );
+
+            return $myth;
+        }
+    };
+}
+
 /// Struct that associate to a variant myth
 pub struct Variant2Myth<'a> {
     annotations: &'a annotations_db::AnnotationsDataBase,
@@ -106,16 +121,7 @@ impl<'a> Variant2Myth<'a> {
         let mut myth = myth::Myth::from_variant(variant.clone());
 
         // Ignore not variant we could manage
-        if !variant.valid() {
-            myth.add_annotation(
-                myth::AnnotationMyth::from_nowhere()
-                    .effects(vec![effect::Effect::Ignore])
-                    .build()
-                    .unwrap(), // No possible error in build
-            );
-
-            return myth;
-        }
+        myth_fast_end!(!variant.valid(), effect::Effect::Ignore, myth);
 
         // Get annotation
         let not_coding_annotations = self
@@ -123,16 +129,11 @@ impl<'a> Variant2Myth<'a> {
             .get_annotations(&variant.seqname, variant.get_interval());
 
         // Intergenic region
-        if not_coding_annotations.is_empty() {
-            myth.add_annotation(
-                myth::AnnotationMyth::from_nowhere()
-                    .effects(vec![effect::Effect::IntergenicRegion])
-                    .build()
-                    .unwrap(), // No possible error in build
-            );
-
-            return myth;
-        }
+        myth_fast_end!(
+            not_coding_annotations.is_empty(),
+            effect::Effect::IntergenicRegion,
+            myth
+        );
 
         // Add myth with gene associate information
         if self.annotators_choices.contains(AnnotatorsChoicesRaw::Gene) {
