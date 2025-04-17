@@ -55,8 +55,8 @@ rayon          = { version = "1", optional = true }
 csv            = { version = "1" }
 niffler        = { version = "3" }
 noodles        = { version = "0.91", features = ["fasta"] }
-arrow          = { version = "54", optional = true }
-parquet        = { version = "54", optional = true }
+arrow          = { version = "55", optional = true }
+parquet        = { version = "55", optional = true }
 serde_json     = { version = "1", features = ["preserve_order"], optional = true }
 serde          = { version = "1", features = ["derive"], optional = true }
 
