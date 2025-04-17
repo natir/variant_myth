@@ -139,11 +139,7 @@ impl AnnotationsDataBase {
         updown_distance: u64,
     ) {
         if annotation.get_feature() == b"transcript" {
-            let upstream = if interval.start < updown_distance {
-                0
-            } else {
-                interval.start - updown_distance
-            };
+            let upstream = interval.start.saturating_sub(updown_distance);
 
             tree.push(clairiere::Node::new(
                 upstream,
