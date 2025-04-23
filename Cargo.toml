@@ -97,6 +97,11 @@ panic           = 'abort'
 incremental     = false
 
 
+[profile.bench]
+codegen-units = 16
+lto = "thin"
+
+
 [profile.profiling]
 inherits = "release"
 debug    = true

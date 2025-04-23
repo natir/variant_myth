@@ -198,7 +198,7 @@ where
 
 #[test]
 fn annotator_gene() -> anyhow::Result<()> {
-    let tmp_path = tempfile::tempdir()?.into_path();
+    let tmp_path = tempfile::tempdir()?.keep();
     let mut truth_path = std::path::PathBuf::from("tests/data/truth/annotator_gene");
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
 
@@ -261,7 +261,7 @@ fn annotator_gene() -> anyhow::Result<()> {
 
 #[test]
 fn annotator_feature() -> anyhow::Result<()> {
-    let tmp_path = tempfile::tempdir()?.into_path();
+    let tmp_path = tempfile::tempdir()?.keep();
     let mut truth_path = std::path::PathBuf::from("tests/data/truth/annotator_feature");
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
 
@@ -325,7 +325,7 @@ fn annotator_feature() -> anyhow::Result<()> {
 #[cfg(not(feature = "parallel"))]
 #[test]
 fn logging_updown_setup() -> anyhow::Result<()> {
-    let tmp_path = tempfile::tempdir()?.into_path();
+    let tmp_path = tempfile::tempdir()?.keep();
     let output_path = tmp_path.join("myth.parquet");
 
     let mut cmd = assert_cmd::Command::cargo_bin("variant_myth")?;
