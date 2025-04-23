@@ -18,6 +18,7 @@ pub mod error;
 pub mod memoizor;
 pub mod myth;
 pub mod output;
+pub mod positions;
 pub mod sequences_db;
 pub mod translate;
 pub mod variant;
